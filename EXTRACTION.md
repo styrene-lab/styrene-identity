@@ -11,8 +11,9 @@ edition/MSRV explicit, isolates the workspace, and fixes the pre-existing placem
 of SSH-agent dependencies beneath the Android-only dependency table. That feature
 failed in the source baseline on macOS. No derivation or custody behavior changed.
 
-`extraction.json` records original and extracted digests for the 41 original crate
-files. The MIT license preserves original notices as a copied file; unrelated monorepo LICENSE-only commits are excluded from this repository history. The lockfile originates from
+`extraction.json` records the extraction-time digests at `7ce44fd8` for the 41
+original crate files. It is a historical record, not a digest manifest for later
+maintenance commits. The MIT license preserves original notices as a copied file; unrelated monorepo LICENSE-only commits are excluded from this repository history. The lockfile originates from
 the backend lock and is pruned for the standalone dependency graph.
 
 Rust 1.97.0 is pinned. Run:
@@ -22,7 +23,7 @@ cargo test --locked
 cargo test --locked --features repository-signing,ssh-agent,pki,age-format
 cargo check --locked --lib --no-default-features
 cargo check --locked --lib --no-default-features --features repository-signing
-cargo package --locked --allow-dirty
+cargo package --locked
 ```
 
 Hardware access and native device lifecycle tests require explicit separate runs.
