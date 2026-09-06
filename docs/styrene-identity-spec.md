@@ -10,11 +10,29 @@ supersedes: [styrene-identity (design), yubikey-rns-identity (research)]
 
 # Styrene Identity: Key Derivation and Signing Specification
 
+## Implementation status
+
+This draft combines implemented cryptographic contracts with historical product
+proposals. The source and committed conformance vectors establish current bytes;
+[COMPATIBILITY.md](../COMPATIBILITY.md) governs changes to released profiles.
+
+Signer-tier, distribution, and lifecycle sections describe intent where they
+exceed the source. In particular, Tier C is not implemented. Apple Keychain and
+Android Keystore adapters are implemented but return roots into process memory;
+the YubiKey adapter also returns its FIDO2-derived root. Tier names do not prove
+non-exportable derived keys, Secure Enclave signing, or StrongBox use.
+`SignerChain::new_sorted` sorts by tier; `new` preserves order. Both select the
+first available signer, propagate its errors, and do not check same-root identity.
+
+See [the security model](../SECURITY.md) for current custody guarantees and
+[the plugin boundary](plugin-boundary.md) for lifecycle work still to design.
+Historical “resolved” entries below do not establish device or plugin acceptance.
+
 ## 1. Overview
 
 Styrene Identity provides a unified cryptographic root from which all protocol-specific keys are deterministically derived. A single 32-byte root secret, stored in hardware (YubiKey), a credential manager (Bitwarden), or an encrypted file, feeds an HKDF-SHA256 derivation hierarchy that produces keys for mesh networking (RNS, Yggdrasil, WireGuard), SSH authentication, git commit signing, age file encryption, agent delegation, and identity-bound X.509 control-plane certificates.
 
-This document specifies the derivation hierarchy, signer tiers, SSH agent protocol, agent delegation model, and security properties of the system as implemented in the `styrene-identity` Rust crate.
+This document describes the derivation hierarchy and the original signer, SSH agent, delegation, and security design. Apply the implementation-status distinctions above when using it.
 
 ### 1.1 Design Goals
 

@@ -4,13 +4,20 @@ Deterministic key hierarchy for Styrene mesh nodes. One root secret derives
 all protocol-specific keys, including Git commit signing and repository
 authority keys, via HKDF-SHA256 with domain separation.
 
-Published on [crates.io](https://crates.io/crates/styrene-identity).
+For this extracted repository, consume a reviewed immutable Git revision. Do not
+assume registry version `0.3.2` contains this checkout's contracts. The pin below
+is the extraction baseline; later revisions need their own consumer validation.
+
+Agents start with [AGENTS.md](AGENTS.md). See [CONTRIBUTING.md](CONTRIBUTING.md)
+for standalone validation, [integration context](docs/integration-context.md)
+for repository ownership, and [the plugin boundary](docs/plugin-boundary.md)
+for the accepted direction and remaining design work.
 
 ## Quick start
 
 ```toml
 [dependencies]
-styrene-identity = "0.3.2"
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc" }
 ```
 
 ### Generate an identity
@@ -178,9 +185,9 @@ unambiguous even when they contain path separators.
 
 ## Signer tiers
 
-The `IdentitySigner` trait abstracts over four storage tiers. All tiers
-produce the same 32-byte root secret — they are different access paths
-to the same identity.
+The `IdentitySigner` trait exposes a root secret through custody adapters.
+Multiple adapters represent the same identity only when provisioned with the
+same root. Neither the trait nor `SignerChain` verifies that equivalence.
 
 | Tier | Backend | Feature | Status |
 |------|---------|---------|--------|
@@ -189,14 +196,16 @@ to the same identity.
 | C | Bitwarden / 1Password | — | Planned |
 | D | Encrypted file (argon2id + ChaCha20Poly1305) | `file-signer` (default) | Implemented |
 
-`SignerChain` tries signers in tier order (A→D), using the first available:
+`SignerChain::new_sorted` sorts by tier; `new` preserves caller order. Both use
+the first available signer and propagate its operation error without retrying
+other signers. Availability is a hint, not proof of successful authentication:
 
 ```rust,ignore
 use styrene_identity::signer::SignerChain;
 
 let chain = SignerChain::new_sorted(vec![
     Box::new(yubikey_signer),  // tried first
-    Box::new(file_signer),     // fallback
+    Box::new(file_signer),     // used if earlier signers report unavailable
 ]);
 let root = chain.root_secret().await?;
 ```
@@ -208,6 +217,7 @@ let root = chain.root_secret().await?;
 | `file-signer` | **yes** | `FileSigner`, `IdentityVault` (argon2, chacha20poly1305) |
 | `signing` | via file-signer | `pubkey` module (ed25519-dalek, x25519-dalek) |
 | `repository-signing` | no | repository authority bindings and strict Ed25519 verification |
+| `age-format` | no | age Bech32 key encoding |
 | `pki` | no | identity-bound X.509 CA/client/server certificates (rcgen) |
 | `yubikey` | no | `YubiKeySigner` (FIDO2 hmac-secret) |
 | `keychain` | no | device-bound Apple Keychain signer, available after first unlock |
@@ -218,20 +228,20 @@ Minimal dependency footprint — disable `default-features` and pick only
 what you need:
 
 ```toml
-# Just the derivation hierarchy, no file I/O or crypto
-styrene-identity = { version = "0.3.2", default-features = false }
+# Derivation and core contracts, without the file signer
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false }
 
 # Derivation + public key helpers, no file signer
-styrene-identity = { version = "0.3.2", default-features = false, features = ["signing"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false, features = ["signing"] }
 
 # Repository authority profile, no signer storage or transport
-styrene-identity = { version = "0.3.2", default-features = false, features = ["repository-signing"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false, features = ["repository-signing"] }
 
 # Deterministic X.509 issuance for control-plane TLS/mTLS
-styrene-identity = { version = "0.3.2", default-features = false, features = ["pki"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false, features = ["pki"] }
 
 # Full file-based identity (default)
-styrene-identity = "0.3.2"
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc" }
 ```
 
 ## File format
@@ -293,7 +303,7 @@ governance policy.
 Enable only the required profile:
 
 ```toml
-styrene-identity = { version = "0.3.2", default-features = false, features = ["repository-signing"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false, features = ["repository-signing"] }
 ```
 
 `styrene-identity` verifies identity attribution and cryptographic validity.

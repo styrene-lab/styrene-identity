@@ -19,10 +19,26 @@
 
 ## Secret Input Handling
 
-Passphrase and PIN are provided via trait-based providers (`PassphraseProvider`, `PinProvider`), never via environment variables. Environment variables are rejected because:
-- Visible to co-tenant processes via `/proc/<pid>/environ`
-- Inherited by child processes
-- May be logged in shell history
+Passphrases and PINs enter through `PassphraseProvider` and `PinProvider`.
+The crate has no built-in environment-variable provider. Caller implementations
+can still read environment variables; the traits do not enforce credential origin.
+Callers must select an appropriate protected input mechanism.
+
+## Custody boundaries
+
+`IdentitySigner::root_secret()` returns secret bytes to the caller. Current
+adapters derive and sign in process memory. YubiKey keeps its credential secret
+on the token but returns the FIDO2-derived root. Apple Keychain stores a
+retrievable root; Android Keystore wraps a root with an AES key. Neither adapter
+implements Styrene Ed25519 signing inside a Secure Enclave or StrongBox.
+
+`SignerTier` is a classification, not hardware attestation. `is_available()` is
+an adapter-specific hint, not proof of unlock, user verification, or successful
+signing. `SignerChain` selects the first available adapter and returns its error
+without retrying. It does not verify that adapters have the same Identity ID.
+
+Zeroization protects the documented buffers, not every copy made by callers,
+libraries, operating systems, or crash collection. See accepted risks below.
 
 ## File Permissions
 
@@ -56,7 +72,7 @@ The `IdentitySigner::sign()` method signs arbitrary data with no built-in nonce,
 
 ### A4. SSH agent double `root_secret()` on sign
 
-The SSH agent calls `root_secret()` twice per `sign()` request — once to build the public key map, once to derive the matching seed. For hardware signers (YubiKey), this requires two physical interactions. This is a deliberate trade-off: the alternative (caching all seeds) would hold all private key material in memory simultaneously, increasing the blast radius of a memory disclosure.
+The SSH agent calls `root_secret()` twice per `sign()` request — once to build the public key map, once to derive the matching seed. For hardware signers (YubiKey), this makes two root requests; physical interaction depends on token policy. This is a deliberate trade-off: the alternative (caching all seeds) would hold all private key material in memory simultaneously, increasing the blast radius of a memory disclosure.
 
 ### A5. Non-Unix file permissions
 

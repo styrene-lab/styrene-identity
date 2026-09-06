@@ -3,14 +3,14 @@
 use rand_core::RngCore;
 use zeroize::Zeroize;
 
-/// Signer implementation tier — indicates trust level and key storage model.
+/// Backend classification and ordering; not attestation of hardware custody.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SignerTier {
-    /// Hardware HSM — non-exportable keys (YubiKey PIV/FIDO2).
+    /// Hardware-token adapter. The current FIDO2 adapter returns a derived root.
     HardwareHsm,
-    /// Device HSM — platform secure element (iOS Secure Enclave, Android StrongBox).
+    /// Platform storage adapter; does not imply on-device Ed25519 signing.
     DeviceHsm,
-    /// Credential manager — software key store (Bitwarden, 1Password SSH items).
+    /// Reserved credential-manager classification; no built-in adapter yet.
     CredentialManager,
     /// Encrypted file — argon2id + ChaCha20Poly1305 on disk (default).
     EncryptedFile,
@@ -41,9 +41,8 @@ pub enum SignerError {
 /// Abstract identity signer — implementations wrap hardware or software key stores.
 ///
 /// The signer provides the 32-byte root secret that feeds the HKDF derivation
-/// hierarchy. Higher-tier signers (A, B) never expose the raw secret — they
-/// perform derivation internally. Lower-tier signers (C, D) yield the secret
-/// for the caller to derive keys.
+/// hierarchy. Current adapters return that root into process memory and perform
+/// software derivation/signing. This trait is not an opaque hardware-key API.
 ///
 /// All implementations must be `Send + Sync` for use in async daemon context.
 #[async_trait::async_trait]
@@ -54,22 +53,21 @@ pub trait IdentitySigner: Send + Sync {
     /// Human-readable label (e.g., "YubiKey 5C #12345", "Keychain", "~/.styrene/identity").
     fn label(&self) -> &str;
 
-    /// Whether the signer is currently unlocked and ready to sign.
+    /// Adapter-specific availability hint; does not prove unlock or signing success.
     fn is_available(&self) -> bool;
 
     /// Get the 32-byte root secret for HKDF derivation.
     ///
-    /// For Tier A/B, this may require user interaction (NFC tap, biometric).
-    /// For Tier C/D, this reads from the key store.
+    /// Storage access and user interaction depend on the adapter and its policy.
+    /// A tier alone does not establish touch or biometric enforcement.
     ///
     /// The returned secret is zeroized on drop.
     async fn root_secret(&self) -> Result<RootSecret, SignerError>;
 
     /// Sign arbitrary data with the identity's Ed25519 key.
     ///
-    /// Implementations must derive or use the signing key appropriate to their tier.
-    /// Hardware signers (Tier A/B) use on-device signing.
-    /// Software signers (Tier C/D) derive via HKDF then sign with ed25519-dalek.
+    /// Current built-in adapters derive via HKDF and sign in process memory.
+    /// Callers supply protocol framing and replay protection.
     async fn sign(&self, data: &[u8]) -> Result<Vec<u8>, SignerError>;
 }
 
@@ -118,7 +116,7 @@ impl RootSecret {
     /// use styrene_identity::signer::RootSecret;
     ///
     /// let ephemeral = RootSecret::ephemeral();
-    /// // Derive keys, use them, drop — no trace left.
+    /// // Derive keys, use them, drop. Caller copies and metadata need separate handling.
     /// ```
     pub fn ephemeral() -> Self {
         let mut bytes = [0u8; 32];
@@ -133,8 +131,10 @@ impl std::fmt::Debug for RootSecret {
     }
 }
 
-/// Ordered chain of signers — tries each in tier order (A→B→C→D) until
-/// one succeeds. This is the automatic fallback mechanism described in the spec.
+/// Ordered chain selecting the first signer whose availability hint is true.
+/// `new` preserves order; `new_sorted` sorts by tier (A→B→C→D).
+/// Operation errors are returned without trying another signer. The chain does
+/// not verify that configured signers represent the same identity.
 ///
 /// ```text
 /// SignerChain [YubiKeySigner, FileSigner]

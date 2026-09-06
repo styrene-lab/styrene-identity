@@ -24,18 +24,21 @@
 //!
 //! # Signer tiers
 //!
-//! The [`IdentitySigner`] trait abstracts over four storage backends.
-//! All tiers produce the same root secret — they are different access
-//! paths to the same identity.
+//! The [`IdentitySigner`] trait exposes roots through custody adapters.
+//! Multiple adapters represent one identity only when provisioned with the same
+//! root. The trait and chain do not verify this equivalence. Current adapters
+//! release the root into process memory; tier names do not attest hardware custody.
 //!
 //! | Tier | Backend | Feature |
 //! |------|---------|---------|
 //! | A | YubiKey FIDO2 hmac-secret | `yubikey` |
-//! | B | Platform secure element | — (planned) |
-//! | C | Credential manager (Bitwarden, Keychain) | — (planned) |
+//! | B | Apple Keychain / Android Keystore | `keychain`, `android-keystore` |
+//! | C | Credential manager | — (planned) |
 //! | D | Encrypted file (argon2id + ChaCha20Poly1305) | `file-signer` (default) |
 //!
-//! [`SignerChain`] tries signers in tier order (A→D), using the first available.
+//! [`SignerChain::new_sorted`](signer::SignerChain::new_sorted) sorts by tier;
+//! `new` preserves order. Both select the first available signer and return its
+//! result without retrying operation errors. Availability is only a hint.
 //!
 //! # Feature flags
 //!
@@ -46,6 +49,9 @@
 //! | `repository-signing` | no | Repository authority bindings and strict verification |
 //! | `pki` | no | identity-bound X.509 CA/client/server certificates |
 //! | `yubikey` | no | `YubiKeySigner` (FIDO2 hmac-secret) |
+//! | `keychain` | no | Apple Keychain storage (Apple targets) |
+//! | `android-keystore` | no | AES-wrapped root storage (Android targets) |
+//! | `age-format` | no | age Bech32 encoding |
 //! | `ssh-agent` | no | `StyreneAgent` (SSH agent protocol) |
 //!
 //! # Derivation hierarchy
@@ -96,10 +102,10 @@
 //!
 //! # Security
 //!
-//! - All secret material is zeroized on drop ([`RootSecret`], [`KeyDeriver`], [`DerivedKeys`])
-//! - Passphrases and PINs are provided via traits, never environment variables
-//! - File creation uses `O_EXCL` (no TOCTOU race)
-//! - argon2id params exceed OWASP minimums (m=64MiB, t=3, p=1)
+//! - [`RootSecret`], [`KeyDeriver`], and [`DerivedKeys`] zeroize their owned secrets on drop
+//! - Passphrase/PIN providers are traits; credential origin is caller-controlled
+//! - New identity file creation uses exclusive creation to prevent overwrites
+//! - File encryption uses Argon2id (m=64MiB, t=3, p=1)
 //!
 //! [`IdentitySigner`]: signer::IdentitySigner
 //! [`SignerChain`]: signer::SignerChain
