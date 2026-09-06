@@ -1,7 +1,7 @@
 # Extraction from styrene-rs
 
 This repository retains path-filtered history of `crates/libs/styrene-identity`
-and the root LICENSE from `styrene-lab/styrene-rs` through source revision
+from `styrene-lab/styrene-rs` through source revision
 `579ee533cf37f15f61e3d3661bb52635b0dd897d`. Filtered commits have new hashes;
 original generator revisions in corpus provenance remain references to styrene-rs.
 
@@ -12,7 +12,7 @@ of SSH-agent dependencies beneath the Android-only dependency table. That featur
 failed in the source baseline on macOS. No derivation or custody behavior changed.
 
 `extraction.json` records original and extracted digests for the 41 original crate
-files. The MIT license preserves original notices. The lockfile originates from
+files. The MIT license preserves original notices as a copied file; unrelated monorepo LICENSE-only commits are excluded from this repository history. The lockfile originates from
 the backend lock and is pruned for the standalone dependency graph.
 
 Rust 1.97.0 is pinned. Run:
