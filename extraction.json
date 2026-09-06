@@ -1,0 +1,252 @@
+{
+  "source_repository": "https://github.com/styrene-lab/styrene-rs",
+  "source_revision": "579ee533cf37f15f61e3d3661bb52635b0dd897d",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "source_sha256": "cbab90e04cfc884f8bd38990f66a301ad1064edae833c1b1678fed150b18b6ce",
+      "extracted_sha256": "cbab90e04cfc884f8bd38990f66a301ad1064edae833c1b1678fed150b18b6ce",
+      "identical": true
+    },
+    {
+      "path": "COMPATIBILITY.md",
+      "source_sha256": "fa6eae3dbcafe64eea6b9b725988f2b1fafd245b2c48cb60c40b86b6b6a3c1fd",
+      "extracted_sha256": "fa6eae3dbcafe64eea6b9b725988f2b1fafd245b2c48cb60c40b86b6b6a3c1fd",
+      "identical": true
+    },
+    {
+      "path": "Cargo.toml",
+      "source_sha256": "b3f3a0c7b4f67160362ed774de21c4d3456b2b984cccca642514b1cedb325878",
+      "extracted_sha256": "3d6339a389ed212fa270817a6f47710c4b5f15b414f041db8ccaf954ff4bd90a",
+      "identical": false
+    },
+    {
+      "path": "README.md",
+      "source_sha256": "656a8fede31a56b140ca9f76756a3f7679ca924180f9a1e4237129eef2a850f8",
+      "extracted_sha256": "656a8fede31a56b140ca9f76756a3f7679ca924180f9a1e4237129eef2a850f8",
+      "identical": true
+    },
+    {
+      "path": "SECURITY.md",
+      "source_sha256": "5ec66075d1f8753b6bc9b3a870c74308d7b22c93227474482dfbbeeacaaabafd",
+      "extracted_sha256": "5ec66075d1f8753b6bc9b3a870c74308d7b22c93227474482dfbbeeacaaabafd",
+      "identical": true
+    },
+    {
+      "path": "docs/styrene-identity-spec.md",
+      "source_sha256": "f95685edca3b1069482db910e7231ce0b69f8f995575e0f8451cceaea5f950fc",
+      "extracted_sha256": "f95685edca3b1069482db910e7231ce0b69f8f995575e0f8451cceaea5f950fc",
+      "identical": true
+    },
+    {
+      "path": "docs/unlinkability.md",
+      "source_sha256": "ed38175cde26a7cafcccf7083b8bd72193222272425aca46bdcf09496e5c2947",
+      "extracted_sha256": "ed38175cde26a7cafcccf7083b8bd72193222272425aca46bdcf09496e5c2947",
+      "identical": true
+    },
+    {
+      "path": "examples/generate_derivation_vectors.rs",
+      "source_sha256": "574cbf8e8ab5636218347612e84e393c9c12117241618fe65a237bfcac33314b",
+      "extracted_sha256": "574cbf8e8ab5636218347612e84e393c9c12117241618fe65a237bfcac33314b",
+      "identical": true
+    },
+    {
+      "path": "examples/generate_repository_signing_negative_vectors.rs",
+      "source_sha256": "e046fd4826d9a345c9a556c857f8ab1ddca8eb02cbfb44ca89b4ca14048e434c",
+      "extracted_sha256": "e046fd4826d9a345c9a556c857f8ab1ddca8eb02cbfb44ca89b4ca14048e434c",
+      "identical": true
+    },
+    {
+      "path": "examples/generate_repository_signing_vectors.rs",
+      "source_sha256": "724b7676f31cf3bc291e62eaf7d6752ad1f9974da4e1fd54c36d40bb10647fd5",
+      "extracted_sha256": "724b7676f31cf3bc291e62eaf7d6752ad1f9974da4e1fd54c36d40bb10647fd5",
+      "identical": true
+    },
+    {
+      "path": "src/android_keystore_signer.rs",
+      "source_sha256": "91b528658dca0e3f109cb215dc057bec950686852cf11e6cc3b01398acce0912",
+      "extracted_sha256": "91b528658dca0e3f109cb215dc057bec950686852cf11e6cc3b01398acce0912",
+      "identical": true
+    },
+    {
+      "path": "src/derive.rs",
+      "source_sha256": "478c0caff1dfcaab61e6bfd54b8df97544751680dd57dd079db7884cb934289c",
+      "extracted_sha256": "478c0caff1dfcaab61e6bfd54b8df97544751680dd57dd079db7884cb934289c",
+      "identical": true
+    },
+    {
+      "path": "src/discover.rs",
+      "source_sha256": "b654d199b6ebf353906dba04d58d7d32fb37f2894a855b151429edeeb7980479",
+      "extracted_sha256": "b654d199b6ebf353906dba04d58d7d32fb37f2894a855b151429edeeb7980479",
+      "identical": true
+    },
+    {
+      "path": "src/export.rs",
+      "source_sha256": "38df0066c22f8784a9560053e73b52fe93e7cc23eb0b02c9f715fe40847c049f",
+      "extracted_sha256": "38df0066c22f8784a9560053e73b52fe93e7cc23eb0b02c9f715fe40847c049f",
+      "identical": true
+    },
+    {
+      "path": "src/file_signer.rs",
+      "source_sha256": "5bdccea46852df3291c33e1fe3d3aa13ccabd2a3fa0381374236e18f64372029",
+      "extracted_sha256": "5bdccea46852df3291c33e1fe3d3aa13ccabd2a3fa0381374236e18f64372029",
+      "identical": true
+    },
+    {
+      "path": "src/format.rs",
+      "source_sha256": "9d8cb466bda95ef2991583e514dfb2e3f5b88eab8c1de202a478b501d50bc0ec",
+      "extracted_sha256": "9d8cb466bda95ef2991583e514dfb2e3f5b88eab8c1de202a478b501d50bc0ec",
+      "identical": true
+    },
+    {
+      "path": "src/identity.rs",
+      "source_sha256": "be39d15a88308f0f9d31f5b8f798e092bf0d392ea4d044c4b2cb97c544fadb9f",
+      "extracted_sha256": "be39d15a88308f0f9d31f5b8f798e092bf0d392ea4d044c4b2cb97c544fadb9f",
+      "identical": true
+    },
+    {
+      "path": "src/identity_id.rs",
+      "source_sha256": "614654a912a7a2ccbd57f09a1719d249a4f6b9c8307ca6e6a116d47c2161b790",
+      "extracted_sha256": "614654a912a7a2ccbd57f09a1719d249a4f6b9c8307ca6e6a116d47c2161b790",
+      "identical": true
+    },
+    {
+      "path": "src/keychain_signer.rs",
+      "source_sha256": "9a92a03d413b84708b0f0412a0eb9c0f45bed20c1d07221500ce3a0ffb5bd626",
+      "extracted_sha256": "9a92a03d413b84708b0f0412a0eb9c0f45bed20c1d07221500ce3a0ffb5bd626",
+      "identical": true
+    },
+    {
+      "path": "src/lib.rs",
+      "source_sha256": "1e9c472e1d78cea0ae52f57b98db86889adf21712b1a3089b11a6053b32974f3",
+      "extracted_sha256": "1e9c472e1d78cea0ae52f57b98db86889adf21712b1a3089b11a6053b32974f3",
+      "identical": true
+    },
+    {
+      "path": "src/pki.rs",
+      "source_sha256": "fdf551040f24b54d4c173fdb28f3388d0c65b628256f59169f8042317b48bd86",
+      "extracted_sha256": "fdf551040f24b54d4c173fdb28f3388d0c65b628256f59169f8042317b48bd86",
+      "identical": true
+    },
+    {
+      "path": "src/pubkey.rs",
+      "source_sha256": "4da5f24760d374215a81e75d185f6f88c895ccf59d6eacafd4dc84d6ff52b74c",
+      "extracted_sha256": "4da5f24760d374215a81e75d185f6f88c895ccf59d6eacafd4dc84d6ff52b74c",
+      "identical": true
+    },
+    {
+      "path": "src/records/lifecycle_transition.rs",
+      "source_sha256": "d0339d8b19636cb3e94837a258ddb0ceb4d2c3c9cb8880df763aa6e1b2691445",
+      "extracted_sha256": "d0339d8b19636cb3e94837a258ddb0ceb4d2c3c9cb8880df763aa6e1b2691445",
+      "identical": true
+    },
+    {
+      "path": "src/records/mod.rs",
+      "source_sha256": "44d726ab6978dbe1068ce285781f380c2b5c191ffe419641311b3912aadba910",
+      "extracted_sha256": "44d726ab6978dbe1068ce285781f380c2b5c191ffe419641311b3912aadba910",
+      "identical": true
+    },
+    {
+      "path": "src/records/runtime_certificate.rs",
+      "source_sha256": "467ddc0552282461f207dc727e201af824ed01e6d2475abc72659e709208945a",
+      "extracted_sha256": "467ddc0552282461f207dc727e201af824ed01e6d2475abc72659e709208945a",
+      "identical": true
+    },
+    {
+      "path": "src/repository_signing.rs",
+      "source_sha256": "5b730a863c866987674a142fc1ca656fef3e6914b89be62f4bd08c90abae0432",
+      "extracted_sha256": "5b730a863c866987674a142fc1ca656fef3e6914b89be62f4bd08c90abae0432",
+      "identical": true
+    },
+    {
+      "path": "src/signer.rs",
+      "source_sha256": "8472913372f1bf5d1513360d9f8a968a80d01ad4cdf92c53e04d8ebc55374a6b",
+      "extracted_sha256": "8472913372f1bf5d1513360d9f8a968a80d01ad4cdf92c53e04d8ebc55374a6b",
+      "identical": true
+    },
+    {
+      "path": "src/ssh_agent.rs",
+      "source_sha256": "661beaeb7b5b44548fd49e935e9fb8c7868378036b647a08a32eb9c01e24e71e",
+      "extracted_sha256": "661beaeb7b5b44548fd49e935e9fb8c7868378036b647a08a32eb9c01e24e71e",
+      "identical": true
+    },
+    {
+      "path": "src/vault.rs",
+      "source_sha256": "8330414b18a0260890981e45051a43caf2a108fd7534647da1989c797184718c",
+      "extracted_sha256": "8330414b18a0260890981e45051a43caf2a108fd7534647da1989c797184718c",
+      "identical": true
+    },
+    {
+      "path": "src/yubikey_signer.rs",
+      "source_sha256": "9c3e560387f7be70bab6bee1a3754f18790056da1a05223ea6ff1f83f95f7ba2",
+      "extracted_sha256": "9c3e560387f7be70bab6bee1a3754f18790056da1a05223ea6ff1f83f95f7ba2",
+      "identical": true
+    },
+    {
+      "path": "tests/crypto_suite.rs",
+      "source_sha256": "1bb5d1e17f521122e6e6b24557e57837cab5e65fc73e5ff6248f1e18870f343d",
+      "extracted_sha256": "1bb5d1e17f521122e6e6b24557e57837cab5e65fc73e5ff6248f1e18870f343d",
+      "identical": true
+    },
+    {
+      "path": "tests/minimal-repository-signing-consumer/Cargo.lock",
+      "source_sha256": "2edcb6bb824316f7a8f892511d88c1e2f7c9467f18209ed58ce8e978f6470e0c",
+      "extracted_sha256": "2edcb6bb824316f7a8f892511d88c1e2f7c9467f18209ed58ce8e978f6470e0c",
+      "identical": true
+    },
+    {
+      "path": "tests/minimal-repository-signing-consumer/Cargo.toml",
+      "source_sha256": "09aa1eaf1c1d1710b46d9411d69e83742a58bec866a9344798155f840c5476bb",
+      "extracted_sha256": "09aa1eaf1c1d1710b46d9411d69e83742a58bec866a9344798155f840c5476bb",
+      "identical": true
+    },
+    {
+      "path": "tests/minimal-repository-signing-consumer/src/main.rs",
+      "source_sha256": "7bfc553ab8ed92fe4d4eb31718df4d2f986828428886d74b7af9a95a7aacdb05",
+      "extracted_sha256": "7bfc553ab8ed92fe4d4eb31718df4d2f986828428886d74b7af9a95a7aacdb05",
+      "identical": true
+    },
+    {
+      "path": "tests/phase3_advanced.rs",
+      "source_sha256": "197cbf786be3cc13413fdcea2e0dea8cb69f816e9d29867ab86b516a7be3664f",
+      "extracted_sha256": "197cbf786be3cc13413fdcea2e0dea8cb69f816e9d29867ab86b516a7be3664f",
+      "identical": true
+    },
+    {
+      "path": "tests/repository_signing_negative_conformance.rs",
+      "source_sha256": "c392dba9cc19b1269a8764a906ecd1ffef02f53961344ea38ec175b2e060a065",
+      "extracted_sha256": "c392dba9cc19b1269a8764a906ecd1ffef02f53961344ea38ec175b2e060a065",
+      "identical": true
+    },
+    {
+      "path": "tests/repository_signing_provenance.rs",
+      "source_sha256": "262855e2076fc85e164bc67d7b65bca4dad2ee2244f28ac2f2dbb3a7a8478c99",
+      "extracted_sha256": "3439f3f08d38fa08eb4b4b4c7ed34c0d2f2a742cf5849cd6769b1d640e25e0f9",
+      "identical": false
+    },
+    {
+      "path": "tests/test-vectors.json",
+      "source_sha256": "040a5143e27fd81d407b689c98a69df360d33dde0793c4bf3fd30d5678a4886b",
+      "extracted_sha256": "040a5143e27fd81d407b689c98a69df360d33dde0793c4bf3fd30d5678a4886b",
+      "identical": true
+    },
+    {
+      "path": "tests/vectors/repository-signing-v1/negative.json",
+      "source_sha256": "acaa21871855494c6c95267d722fc38f1ecc751af9f62a469d4bab435cdb365c",
+      "extracted_sha256": "acaa21871855494c6c95267d722fc38f1ecc751af9f62a469d4bab435cdb365c",
+      "identical": true
+    },
+    {
+      "path": "tests/vectors/repository-signing-v1/positive.json",
+      "source_sha256": "360101239285cf44ef440bef11adb8f11d2a68449350b53dcef2d5a4418c3a79",
+      "extracted_sha256": "360101239285cf44ef440bef11adb8f11d2a68449350b53dcef2d5a4418c3a79",
+      "identical": true
+    },
+    {
+      "path": "tests/vectors/repository-signing-v1/provenance.toml",
+      "source_sha256": "15f3677f5643502bf9c006f59f53360c3e5123da37005645045532640d951984",
+      "extracted_sha256": "15f3677f5643502bf9c006f59f53360c3e5123da37005645045532640d951984",
+      "identical": true
+    }
+  ]
+}

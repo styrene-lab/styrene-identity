@@ -1,0 +1,20 @@
+name: Identity contracts
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  contracts:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - run: cargo test --locked
+      - run: cargo test --locked --features repository-signing,ssh-agent,pki,age-format
+      - run: cargo check --locked --lib --no-default-features
+      - run: cargo check --locked --lib --no-default-features --features repository-signing
+      - run: cargo package --locked --allow-dirty
+      - if: runner.os == 'macOS'
+        run: cargo check --locked --features keychain,yubikey

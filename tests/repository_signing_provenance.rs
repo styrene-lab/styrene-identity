@@ -5,8 +5,7 @@ use sha2::{Digest, Sha256};
 #[test]
 fn repository_signing_corpus_provenance_matches_source_tree() {
     let root = workspace_root();
-    let manifest_path = root
-        .join("crates/libs/styrene-identity/tests/vectors/repository-signing-v1/provenance.toml");
+    let manifest_path = root.join("tests/vectors/repository-signing-v1/provenance.toml");
     let manifest: toml::Value = std::fs::read_to_string(&manifest_path)
         .expect("read repository-signing provenance")
         .parse()
@@ -37,16 +36,18 @@ fn repository_signing_corpus_provenance_matches_source_tree() {
         for entry in manifest[section].as_array().expect("provenance entries") {
             let path = entry["path"].as_str().expect("entry path");
             let expected = entry["sha256"].as_str().expect("entry digest");
-            let bytes = std::fs::read(root.join(path)).expect("read provenance entry");
+            let bytes = std::fs::read(
+                root.join(
+                    path.strip_prefix("crates/libs/styrene-identity/")
+                        .expect("identity-owned provenance path"),
+                ),
+            )
+            .expect("read provenance entry");
             assert_eq!(hex::encode(Sha256::digest(bytes)), expected, "{path}");
         }
     }
 }
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(3)
-        .expect("styrene-identity is three levels below the workspace")
-        .to_path_buf()
+    Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
 }
