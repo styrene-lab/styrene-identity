@@ -15,6 +15,13 @@ jobs:
       - run: cargo test --locked --features repository-signing,ssh-agent,pki,age-format
       - run: cargo check --locked --lib --no-default-features
       - run: cargo check --locked --lib --no-default-features --features repository-signing
-      - run: cargo package --locked --allow-dirty
+      - run: cargo package --locked
       - if: runner.os == 'macOS'
         run: cargo check --locked --features keychain,yubikey
+      - name: Reject test or packaging mutations
+        if: always()
+        shell: bash
+        run: |
+          git diff --exit-code
+          git diff --cached --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
