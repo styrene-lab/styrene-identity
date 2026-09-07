@@ -28,6 +28,10 @@ if [[ "$(uname -s)" == Darwin ]]; then
   if [[ "$(dx --version)" != "dioxus 0.8.0-alpha.1 "* ]]; then echo "dx 0.8.0-alpha.1 is required" >&2; exit 2; fi
   (cd apps/desktop && IDENTITY_BUILD_REVISION="$revision" dx build --release --package styrene-identity-desktop --platform desktop --features desktop)
   bundle="$target_dir/dx/styrene-identity-desktop/release/macos/StyreneIdentityDesktop.app"
+  # The linker signature does not seal the generated app's Info.plist/resources.
+  # Ad-hoc sealing supports local candidate integrity; it is not notarization.
+  codesign --force --sign - --identifier org.styrene.identity "$bundle"
+  codesign --verify --deep --strict --verbose=2 "$bundle"
   ditto -c -k --keepParent "$bundle" "$out/StyreneIdentity-macos.zip"
   cargo metadata --locked --format-version 1 --filter-platform "$target" --features styrene-identity-desktop/desktop > "$out/dependency-metadata.json"
   cargo deny --locked --exclude-dev --target "$target" --manifest-path apps/desktop/Cargo.toml --features desktop list --format json --layout crate > "$out/licenses-desktop.json"

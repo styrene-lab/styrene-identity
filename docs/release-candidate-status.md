@@ -48,3 +48,12 @@ toolchain metadata, dependency results, and source notices. It does not publish 
 crates.io. Registry publication remains gated on the advisory decision, consumer
 acceptance, and release approval. The first profile-bearing previous-release lane
 is unavailable because registry 0.3.2 predates that profile.
+
+## Packaging verification finding
+
+The first candidate at `bc56b9298424eb039ff73cd5fc9dd7aff6153335` passed source
+package verification, checksums, and an optimized CLI create/export/restore/verify
+smoke test. Strict verification of the extracted macOS app then found an unsealed
+bundle: the linker ad-hoc signature did not bind its Info.plist/resources.
+Candidate packaging now performs explicit bundle ad-hoc signing and strict
+verification before archiving. This does not provide Developer ID notarization.
