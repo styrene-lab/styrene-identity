@@ -16,10 +16,23 @@ bindings and certificates, and plan rotation, recovery, and retirement. Hardware
 setup and advanced verification controls belong there. The mesh must remain usable
 without installing those advanced controls.
 
+This repository also owns a standalone version of that Identity UI and a CLI for
+self-contained identity work. Both use shared lifecycle backend operations. The
+[product architecture](product-architecture.md) defines the proposed workspace
+split; the library and backend remain independent of presentation dependencies.
+
 Identity owns reusable contracts. The mesh consumes those contracts and owns its
-runtime orchestration. Presentation can depend on Identity capabilities; Identity
-must not depend on the mesh application or Dioxus. Plugin packaging, execution
-isolation, discovery, and independent ownership policy remain decisions to make.
+runtime orchestration. Presentation can depend on Identity capabilities. The
+Identity library and lifecycle backend must not depend on the mesh application
+or Dioxus. The UI-owner design at `a2baf72ecab685f324416f040879d356d53620b3`
+selects one trusted compile-time optional page with minimal registration and a
+typed read-only client. See the
+[committed handoff](ui-integration-inventory.md#committed-host-design-handoff).
+Runtime installation, isolation, and broader plugin machinery remain deferred.
+
+The first [read-only overview API](read-only-overview.md) and isolated mock
+consumer are implemented for contract review. Production provider adapters,
+host registration, and UI lifecycle behavior remain pending.
 
 ## Existing primitives and missing orchestration
 
@@ -71,6 +84,10 @@ metadata; replacing a root changes identity. Recovery must state which bindings,
 profiles, and device credentials it restores and which need re-enrollment.
 
 ## Next gate
+
+The proposed [Identity provider OpenSpec change](../openspec/changes/identity-provider-contract/proposal.md)
+captures requests/results, acceptance scenarios, open decisions, and implementation
+tasks for this gate. It is pending review and does not establish an implemented API.
 
 Before implementing plugin UI or moving more code:
 

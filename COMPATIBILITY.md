@@ -3,6 +3,16 @@
 This policy applies to the `styrene-repository-signing-v1` profile and its
 consumers. Git commit-signing compatibility is outside this policy.
 
+The proposed [repository release workflow](RELEASE.md) covers other package and
+application surfaces. It does not relax the profile requirements in this document.
+
+The general `identity_verify` helper now uses strict Ed25519 verification, and
+`PublicIdentity::verify` checks its own hash/key consistency. Previously accepted
+weak-key signatures or inconsistent public objects are rejected. This security
+change requires release notes and consumer acceptance. Repository-signing v1
+already used strict checks; its canonical bytes and rejection classes are unchanged.
+See [the adversarial review](docs/adversarial-review-2026-09-06.md).
+
 ## Profile Stability
 
 Released canonical bytes, signing frames, digests, and rejection classes are

@@ -4,6 +4,22 @@ This crate is a standalone Cargo workspace. `rust-toolchain.toml` pins Rust
 1.97.0; `Cargo.toml` specifies edition 2024 and Rust 1.97. Use the committed
 lockfile. No parent workspace, daemon, UI, or lab host is needed for software tests.
 
+The root library remains the default workspace member. The read-only lifecycle
+backend and CLI are additional members with explicit CI lanes. Run their checks:
+
+```sh
+cargo test --locked -p styrene-identity-lifecycle -p styrene-identity-cli
+cargo check --locked -p styrene-identity-lifecycle --no-default-features
+cargo clippy --locked -p styrene-identity-lifecycle -p styrene-identity-cli --all-targets -- -D warnings
+```
+
+`cargo test --workspace --locked` includes both application packages. A root-only
+`cargo test --locked` does not prove their process contracts.
+
+The CLI enables the backend's optional `file-custody` feature. Combined application
+tests exercise mutation recovery on Unix. A backend-only build with no default
+features retains the public read surface without file-custody dependencies.
+
 ## Before editing
 
 ```sh
@@ -25,6 +41,7 @@ cargo test --locked
 cargo test --locked --features repository-signing,ssh-agent,pki,age-format
 cargo check --locked --lib --no-default-features
 cargo check --locked --lib --no-default-features --features repository-signing
+cargo test --locked --manifest-path tests/minimal-overview-consumer/Cargo.toml
 ```
 
 For public API documentation changes:
@@ -92,6 +109,10 @@ pretend the generators originated here. `extraction.json` describes the extracti
 revision, not the current maintenance tree.
 
 ## Consumer handoff and publication
+
+The proposed repository-wide [release workflow](RELEASE.md) covers package SemVer,
+CLI automation, application distribution, and plugin compatibility. Its automation
+and first-release inventory remain pending in the product foundation OpenSpec.
 
 1. Commit the reviewed change and retain its validation results.
 2. Provide the full Identity Git SHA, API/feature impact, and any migration need.
