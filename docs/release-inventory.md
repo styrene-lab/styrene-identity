@@ -71,3 +71,12 @@ unavailable until two profile-bearing releases exist.
 Registry publication still requires the completed release evidence, a resolved
 advisory decision, and release approval. Independent host/device lanes and actual
 Mesh consumer acceptance remain separate from local package compilation.
+
+## Candidate implementation update
+
+Core/default, repository-signing, CLI, and macOS desktop target-filtered dependency
+checks now pass under `deny.toml`. The optional SSH graph remains separately gated
+by the RSA advisory. Desktop adds the explicitly recorded unmaintained `paste`
+notice and an MPL-2.0 source notice; see `docs/dependency-policy.md`.
+The current candidate versions and final software results are recorded in
+`docs/release-candidate-status.md`.

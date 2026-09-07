@@ -1,0 +1,28 @@
+name: Identity release candidate
+on:
+  workflow_dispatch:
+  push:
+    tags: ['styrene-identity-v*-rc.*']
+permissions:
+  contents: read
+jobs:
+  candidate:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: rustup show
+      - run: cargo install cargo-deny --version 0.20.2 --locked
+      - if: runner.os == 'macOS'
+        run: cargo install dioxus-cli --version 0.8.0-alpha.1 --locked
+      - run: scripts/validate.sh
+      - run: scripts/package-candidate.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: identity-candidate-${{ runner.os }}
+          path: target/release-evidence/
+      # Publication is deliberately not a side effect of building a candidate.
+      # Registry approval and unsupported SSH/Linux-desktop lanes remain explicit.

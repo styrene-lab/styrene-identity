@@ -2,17 +2,17 @@
 
 ## Status and authority
 
-This is the proposed repository-wide release policy for the
+This is the repository-wide release policy for the
 [product foundation change](openspec/changes/identity-product-foundation/proposal.md).
-Review and implement its gates before declaring the first release under this
-workflow. Current CI and commands are documented in `CONTRIBUTING.md`.
-There is no publishing job today, and this document does not select a release
-number or authorize publication.
+Current CI and commands are documented in `CONTRIBUTING.md`. `scripts/validate.sh`,
+`scripts/check-dependencies.sh`, and `scripts/package-candidate.sh` implement the
+software and candidate-artifact gates. The release-candidate workflow uploads
+evidence; it never publishes to crates.io as a side effect.
 
-`Cargo.toml` currently identifies the library as `0.3.2`. That inherited number
-does not establish a matching registry artifact or the next available version.
-Inventory registry ownership, published versions, existing tags, and consumer pins
-before choosing the first standalone release number.
+The first standalone candidate is `0.4.0-rc.1`; application/backend/UI packages use
+independent `0.1.0-rc.1` candidate versions. Registry inventory confirms published
+Identity versions through `0.3.2`. See `docs/release-inventory.md`. These are Git-only
+candidate versions until registry approval and remaining acceptance gates close.
 
 The existing [repository-signing compatibility policy](COMPATIBILITY.md) remains
 authoritative for its profile. Package SemVer cannot override immutable
@@ -28,7 +28,7 @@ cryptographic profiles or make persisted bytes safe to reinterpret.
 | Plugin/host contract | Explicit protocol or API compatibility range and capabilities, independent of application display version |
 | Derivation, signed records, backups | Explicit profile/format versions with readers, vectors, and migration rules |
 
-Proposed packages version independently. An application release records an exact
+Packages version independently. An application release records an exact
 tested dependency set rather than forcing crypto-only consumers to upgrade with
 every UI change. Co-released packages can share a milestone, but each gets its own
 version, notes, and compatibility assessment.
@@ -59,7 +59,7 @@ machine fields, exit codes, and supported targets before classifying a change.
 Security fixes still need this assessment. If they alter canonical bytes or
 rejection classes, use an explicit new profile and migration rule.
 
-## Release procedure to implement
+## Release procedure
 
 1. Inventory the source revision, dirty state, registry versions, tag namespace,
    supported consumers, and dependency licenses/advisories.
@@ -86,7 +86,7 @@ rejection classes, use an explicit new profile and migration rule.
    revisions and resolved versions to consumers. Record incomplete publication
    separately from successful packages so retries cannot replace published bytes.
 
-The automation must implement these gates before unattended release is supported.
+The candidate automation does not authorize unattended registry publication.
 Publishing credentials and application signing are scoped release configuration,
 not prerequisites for ordinary library tests.
 

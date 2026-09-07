@@ -17,8 +17,10 @@ jobs:
       - run: cargo check --locked --lib --no-default-features --features repository-signing
       - run: cargo test --locked --manifest-path tests/minimal-overview-consumer/Cargo.toml
       - run: cargo test --locked -p styrene-identity-lifecycle -p styrene-identity-cli
+      - run: cargo test --locked -p styrene-identity-ui -p styrene-identity-desktop
       - run: cargo check --locked -p styrene-identity-lifecycle --no-default-features
       - run: cargo clippy --locked -p styrene-identity-lifecycle -p styrene-identity-cli --all-targets -- -D warnings
+      - run: cargo clippy --locked -p styrene-identity-ui -p styrene-identity-desktop --all-targets -- -D warnings
       - run: cargo package --locked
       - if: runner.os == 'macOS'
         run: cargo check --locked --features keychain,yubikey
