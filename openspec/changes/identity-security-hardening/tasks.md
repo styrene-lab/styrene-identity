@@ -13,8 +13,8 @@
 ## 2. Consumer and release handoff
 <!-- specs: security-contracts -->
 
-- [ ] Review the tightened verifier behavior and record the immutable Identity revision for consumer adoption.
-- [ ] Replace the historical README extraction-pin examples with a reviewed security-fixed source pin once that revision exists.
+- [x] Review the tightened verifier behavior and record the immutable Identity revision for consumer adoption.
+- [x] Replace the historical README extraction-pin examples with a reviewed security-fixed source pin once that revision exists.
 - [ ] Inventory affected consumer verification/enrollment calls and run exact-revision acceptance, including formerly admitted weak-key records if any.
 - [ ] Define and validate explicit legacy pending-journal/recovery-copy migration before advancing existing stores through a release.
 - [ ] Apply the hardening constraints to backup mutation/retention workflows; retain separate UI, platform, and device evidence.

@@ -6,10 +6,12 @@ authority keys, via HKDF-SHA256 with domain separation.
 
 Consume an immutable Git revision for this development repository. Registry version
 `0.3.2` predates the standalone contracts. The pin below is the software-validated
-development checkpoint containing verifier and recovery hardening; consumer
+Git-only release candidate containing verifier and recovery hardening; consumer
 acceptance, platform evidence, and registry release approval remain separate.
 See the [checkpoint handoff](docs/handoffs/2026-09-07-checkpoint.md) and
 [adversarial review](docs/adversarial-review-2026-09-06.md).
+The current [candidate handoff](docs/handoffs/2026-09-07-candidate.md) records the
+immutable source, packaged artifacts, draft review, and remaining acceptance gates.
 
 Agents start with [AGENTS.md](AGENTS.md). See [CONTRIBUTING.md](CONTRIBUTING.md)
 for standalone validation, [integration context](docs/integration-context.md)
@@ -35,7 +37,7 @@ journal migration limits, and the backup inspection/verification slice.
 
 ```toml
 [dependencies]
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "4ea2d0c7a6e5c89e09c6ba05dead917dc5b33e9a" }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1" }
 ```
 
 ### Generate an identity
@@ -253,19 +255,19 @@ what you need:
 
 ```toml
 # Derivation and core contracts, without the file signer
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "4ea2d0c7a6e5c89e09c6ba05dead917dc5b33e9a", default-features = false }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false }
 
 # Derivation + public key helpers, no file signer
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "4ea2d0c7a6e5c89e09c6ba05dead917dc5b33e9a", default-features = false, features = ["signing"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false, features = ["signing"] }
 
 # Repository authority profile, no signer storage or transport
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "4ea2d0c7a6e5c89e09c6ba05dead917dc5b33e9a", default-features = false, features = ["repository-signing"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false, features = ["repository-signing"] }
 
 # Deterministic X.509 issuance for control-plane TLS/mTLS
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "4ea2d0c7a6e5c89e09c6ba05dead917dc5b33e9a", default-features = false, features = ["pki"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false, features = ["pki"] }
 
 # Full file-based identity (default)
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "4ea2d0c7a6e5c89e09c6ba05dead917dc5b33e9a" }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1" }
 ```
 
 ## File format
@@ -332,7 +334,7 @@ governance policy.
 Enable only the required profile:
 
 ```toml
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "4ea2d0c7a6e5c89e09c6ba05dead917dc5b33e9a", default-features = false, features = ["repository-signing"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false, features = ["repository-signing"] }
 ```
 
 `styrene-identity` verifies identity attribution and cryptographic validity.

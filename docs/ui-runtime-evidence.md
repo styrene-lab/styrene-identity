@@ -44,3 +44,12 @@ keyboard, focus, VoiceOver, or full packaged mutation interaction.
 The current UI-owner checkout is still independently active. Actual Mesh host
 integration, persistence of its enable preference, Linux desktop, and mobile/device
 acceptance remain separate handoff lanes.
+
+## Immutable candidate observation
+
+The final sealed candidate was built from
+`eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1`, extracted from its zip, signature-verified,
+and launched from that extracted path. Its visible marker contains that full SHA,
+and the expected disposable canonical ID rendered successfully. Exact executable,
+process, window, and capture hashes are in the
+[candidate handoff](handoffs/2026-09-07-candidate.md).

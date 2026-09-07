@@ -7,6 +7,8 @@
 - [ ] Approve `RELEASE.md` policy, choose first-release numbering, MSRV support, approvers, tag namespace, and prerelease distribution.
 - [ ] Implement release notes and evidence templates, API/dependency checks, package verification, and immutable publication/retry automation.
 - [ ] Exercise a candidate release without publication; verify version classification and interrupted-publication handling.
+- [x] Package and verify a clean Git-only 0.4.0-rc.1 candidate, including optimized CLI smoke tests, ad-hoc-sealed macOS bundle, checksums, and source notices.
+- [x] Create an immutable candidate tag and draft GitHub release without crates.io publication.
 
 ## 2. Workspace and shared backend
 <!-- specs: lifecycle-product -->
