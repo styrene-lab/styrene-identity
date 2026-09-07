@@ -96,3 +96,6 @@ rand = "0.8"
 x509-parser = { version = "0.16", features = ["verify"] }
 
 [workspace]
+resolver = "3"
+members = [".", "crates/styrene-identity-lifecycle", "apps/cli"]
+default-members = ["."]
