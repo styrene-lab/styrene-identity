@@ -23,6 +23,7 @@ use crate::{
 
 const MAX_JOURNAL_BYTES: u64 = MAX_CATALOG_BYTES + 16_384;
 const MAX_OPERATIONS: usize = 1024;
+pub mod artifacts;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
@@ -80,6 +81,7 @@ impl Mutation {
 pub enum OperationState {
     Prepared,
     Completed,
+    Superseded,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -149,6 +151,42 @@ pub struct OperationView {
     pub result: Option<MutationResult>,
     pub journal_version: u32,
     pub retains_recovery_material: bool,
+    pub recovery_migrated_to: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag="family",content="operation",rename_all="snake_case")]
+pub enum ObservedOperation {
+    Catalog(OperationView),
+    Backup(artifacts::BackupOperationView),
+}
+
+impl ObservedOperation {
+    pub fn id(&self)->&str {match self {Self::Catalog(view)=>&view.operation_id,Self::Backup(view)=>&view.operation_id}}
+    pub fn pending(&self)->bool {match self {Self::Catalog(view)=>view.state==OperationState::Prepared,Self::Backup(view)=>view.phase!=artifacts::BackupPhase::Completed}}
+}
+
+/// Read operation history without replaying work or loading credentials.
+pub fn list_operations(store:&Path,include_completed:bool)->Result<Vec<ObservedOperation>,LifecycleError>{
+    let root=Directory::open(store)?;
+    let mut result=Vec::new();
+    match root.child("operations",false){
+        Ok(directory)=>for name in directory.names()?{
+            if name==".artifact-store-v3.json"{continue}
+            if let Some(id)=name.strip_suffix(".json"){
+                if result.len()>=MAX_OPERATIONS{return Err(LifecycleError::OperationFailed)}
+                let journal=parse_journal(&directory.read(std::ffi::OsStr::new(&name),MAX_JOURNAL_BYTES,true)?)?;
+                if journal.operation_id!=id{return Err(LifecycleError::OperationFailed)}
+                result.push(ObservedOperation::Catalog(journal.view()));
+            }
+        },
+        Err(LifecycleError::OperationNotFound)=>{},
+        Err(error)=>return Err(error),
+    }
+    result.extend(artifacts::operation_views(store)?.into_iter().map(ObservedOperation::Backup));
+    result.retain(|view|include_completed||view.pending());
+    result.sort_by(|a,b|a.id().cmp(b.id()));
+    Ok(result)
 }
 
 // Deliberately no Debug: locators and encrypted recovery material stay in the
@@ -167,6 +205,8 @@ struct Journal {
     result: MutationResult,
     #[serde(default)]
     parent_identity: Option<DirectoryIdentity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    recovery_migrated_to: Option<String>,
 }
 
 impl Journal {
@@ -194,6 +234,7 @@ impl Journal {
             result: (self.state == OperationState::Completed).then(|| self.result.clone()),
             journal_version: self.schema_version,
             retains_recovery_material: self.encrypted_creation.is_some(),
+            recovery_migrated_to: self.recovery_migrated_to.clone(),
         }
     }
 }
@@ -203,6 +244,8 @@ struct Store {
     directory: Directory,
     operations: Directory,
     _lock: File,
+    artifact_context: Option<String>,
+    legacy_context: Option<String>,
 }
 
 impl Store {
@@ -237,7 +280,14 @@ impl Store {
             _ => LifecycleError::CatalogUnavailable,
         })?;
         let operations = directory.child("operations", true)?;
-        Ok(Self { root, directory, operations, _lock: lock })
+        Ok(Self {
+            root,
+            directory,
+            operations,
+            _lock: lock,
+            artifact_context: None,
+            legacy_context: None,
+        })
     }
 
     fn journal_path(&self, id: &str) -> PathBuf {
@@ -287,6 +337,10 @@ impl Store {
     fn check_pending(&self, current: &str) -> Result<(), LifecycleError> {
         let mut count = 0;
         for name in self.operations.names()? {
+            if name == ".artifact-store-v3.json" {
+                artifacts::validate_store_guard(self)?;
+                continue;
+            }
             let Some(id) = name.strip_suffix(".json") else {
                 continue;
             };
@@ -298,14 +352,17 @@ impl Store {
             if journal.operation_id != id {
                 return Err(LifecycleError::OperationFailed);
             }
-            if journal.state != OperationState::Completed && journal.operation_id != current {
+            if journal.state == OperationState::Prepared
+                && journal.operation_id != current
+                && self.legacy_context.as_deref() != Some(&journal.operation_id)
+            {
                 return Err(LifecycleError::ReconciliationRequired);
             }
         }
         if count == MAX_OPERATIONS && !self.journal_path(current).exists() {
             return Err(LifecycleError::OperationFailed);
         }
-        Ok(())
+        artifacts::check_pending(self, self.artifact_context.as_deref())
     }
 }
 
@@ -347,6 +404,20 @@ fn execute_with_hook(
         return Err(LifecycleError::AuthenticationRequired.into());
     }
     let store = Store::open(store, mutation.needs_credentials())?;
+    execute_locked(&store, request_id, operation_id, mutation, passphrase, hook)
+}
+
+fn execute_locked(
+    store: &Store,
+    request_id: &str,
+    operation_id: String,
+    mutation: Mutation,
+    passphrase: &[u8],
+    hook: &mut dyn FnMut(Phase) -> Result<(), LifecycleError>,
+) -> Result<MutationResult, MutationFailure> {
+    if artifacts::request_exists(store, request_id)? {
+        return Err(LifecycleError::RequestConflict.into());
+    }
     validate_location(&store.root, &mutation)?;
     let mut journal = match store.read_journal(&operation_id) {
         Ok(journal) => {
@@ -356,11 +427,17 @@ fn execute_with_hook(
             if journal.state == OperationState::Completed {
                 return Ok(replay(journal.result));
             }
+            if journal.state == OperationState::Superseded {
+                return Err(LifecycleError::OperationSuperseded.into());
+            }
             journal
         }
         Err(LifecycleError::OperationNotFound) => {
             store.check_pending(&operation_id)?;
-            let journal = prepare(&store, operation_id.clone(), request_id, mutation, passphrase)?;
+            if let Mutation::Adopt { custody, .. } = &mutation {
+                artifacts::ensure_not_managed_backup(store, custody)?;
+            }
+            let journal = prepare(store, operation_id.clone(), request_id, mutation, passphrase)?;
             store.write_journal(&journal, false).map_err(|error| MutationFailure {
                 error,
                 operation_id: Some(operation_id.clone()),
@@ -377,7 +454,7 @@ fn execute_with_hook(
         }
         Err(error) => return Err(error.into()),
     };
-    finish(&store, &mut journal, passphrase, hook).map_err(|error| MutationFailure {
+    finish(store, &mut journal, passphrase, hook).map_err(|error| MutationFailure {
         error,
         operation_id: Some(operation_id),
         effects: journal.pending_effects(),
@@ -410,6 +487,9 @@ pub fn reconcile(
     }
     if journal.state == OperationState::Completed {
         return Ok(replay(journal.result));
+    }
+    if journal.state == OperationState::Superseded {
+        return Err(LifecycleError::OperationSuperseded.into());
     }
     validate_request(&journal.mutation)?;
     validate_location(&locked.root, &journal.mutation)?;
@@ -584,6 +664,7 @@ fn prepare(
         state: OperationState::Prepared,
         result,
         parent_identity,
+        recovery_migrated_to: None,
     })
 }
 
@@ -776,13 +857,22 @@ fn parse_journal(bytes: &[u8]) -> Result<Journal, LifecycleError> {
     }
     let header: Header =
         serde_json::from_slice(bytes).map_err(|_| LifecycleError::OperationFailed)?;
-    if !matches!(header.schema_version, 1 | 2) {
+    if !matches!(header.schema_version, 1..=3) {
         return Err(LifecycleError::UnsupportedSchema);
     }
     let journal: Journal =
         serde_json::from_slice(bytes).map_err(|_| LifecycleError::OperationFailed)?;
     validate_operation_id(&journal.operation_id)?;
     validate_request(&journal.mutation)?;
+    if (journal.state == OperationState::Superseded || journal.recovery_migrated_to.is_some())
+        && (journal.schema_version != 3
+            || journal
+                .recovery_migrated_to
+                .as_ref()
+                .is_none_or(|id| !id.starts_with("backup-") || !valid_id(id)))
+    {
+        return Err(LifecycleError::UnsupportedSchema);
+    }
     if journal.result.operation_id != journal.operation_id
         || journal.result.catalog_revision == 0
         || journal.result.replayed
@@ -804,7 +894,9 @@ fn parse_journal(bytes: &[u8]) -> Result<Journal, LifecycleError> {
     if expected_target != journal.result.entry_id {
         return Err(LifecycleError::OperationFailed);
     }
-    if journal.schema_version == 2 && journal.state == OperationState::Completed {
+    if matches!(journal.schema_version, 2 | 3)
+        && matches!(journal.state, OperationState::Completed | OperationState::Superseded)
+    {
         if journal.after.is_some()
             || journal.encrypted_creation.is_some()
             || journal.before_digest.is_some()
@@ -912,7 +1004,7 @@ fn complete(journal: &mut Journal) -> Result<(), LifecycleError> {
     // Catalog commit alone is insufficient justification to discard a recovery
     // copy: custody may have disappeared between commit and reconciliation.
     // Checking ciphertext needs no unlock and does not claim key possession.
-    if journal.schema_version == 2
+    if matches!(journal.schema_version, 2 | 3)
         && let Some(encrypted) = &journal.encrypted_creation
     {
         let parent = parent_for(&journal.mutation)?.ok_or(LifecycleError::OperationFailed)?;
@@ -931,7 +1023,7 @@ fn complete(journal: &mut Journal) -> Result<(), LifecycleError> {
         }
     }
     journal.state = OperationState::Completed;
-    if journal.schema_version == 2 {
+    if matches!(journal.schema_version, 2 | 3) {
         journal.encrypted_creation = None;
         journal.after = None;
         journal.before_digest = None;

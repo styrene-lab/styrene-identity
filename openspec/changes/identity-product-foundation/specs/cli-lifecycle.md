@@ -2,6 +2,45 @@
 
 ## ADDED Requirements
 
+### Requirement: Backup writers own recoverable staging before ciphertext publication
+
+Artifact operations must persist staging intent and file identity before writing
+existing-root ciphertext. Source and destination protection are distinct. Recovery
+must authenticate the expected output identity and preserve possible recovery copies.
+
+#### Scenario: Ciphertext write interrupted
+Given durable staging ownership and partially written ciphertext
+When recovery reauthenticates the original source
+Then a new owned staging generation is created
+And the previous generation remains until verified output is installed
+
+#### Scenario: Source disappears after complete staging
+Given staged ciphertext matches its recorded digest and original custody disappears
+When recovery receives correct destination protection
+Then the expected identity is verified and the artifact is published without source custody
+
+#### Scenario: Checksum fields tampered with another identity
+Given staged ciphertext and digest fields were replaced with another root's encrypted bytes
+When publication verifies the expected identity
+Then identity mismatch is returned before publication
+
+#### Scenario: Unrelated object races deletion
+Given another process replaces a managed artifact between checking and quarantine rename
+When deletion checks the quarantined inode
+Then the unrelated object is restored or retained for reconciliation
+And it is not unlinked
+
+#### Scenario: Legacy recovery migration
+Given a pending legacy catalog operation retains an authenticated root
+When an explicit migration installs and verifies a newly protected backup
+Then the old journal records the replacement artifact and removes its retained ciphertext
+And an uncommitted source intent becomes superseded without writing its original destination
+
+#### Scenario: Older writer encounters artifact-capable store
+Given a store contains the version-three artifact compatibility guard
+When a catalog-only older client scans operations before mutation
+Then its unsupported journal-version handling prevents the write
+
 ### Requirement: Public catalog reads are explicit bounded and non-mutating
 
 The CLI must provide capabilities, list, and show through the shared backend.

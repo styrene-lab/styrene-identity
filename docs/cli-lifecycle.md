@@ -3,7 +3,7 @@
 ## Status and ownership
 
 This document combines implemented file-backed catalog CRUD with proposed advanced
-operations. ID01–ID08, ID31–ID32, and operation show/reconcile are implemented in the
+operations. ID01–ID08, ID30–ID36, and operation show/reconcile are implemented in the
 development `idctl` binary and shared lifecycle backend;
 see [CLI usage](../apps/cli/README.md) and the [catalog schema](catalog-schema.md).
 The executable name remains subject to release review and does not rename the
@@ -75,7 +75,7 @@ operation supports durable deduplication. The CLI prints the backend operation I
 once admitted. `--request-id` identifies a retry; `--if-revision` protects against
 concurrent edits. Neither substitutes for `--expect-identity`.
 
-ID01–ID08, ID31–ID32, and the show/reconcile subset of ID44–ID45 have backend and CLI tests.
+ID01–ID08, ID30–ID36, and the show/reconcile subset of ID44–ID45 have backend and CLI tests.
 Other rows, including wait/cancel, remain
 **proposed / CLI not implemented / acceptance not run**. Library primitives noted
 below are implementation inputs, not proof of command acceptance.

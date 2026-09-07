@@ -57,6 +57,20 @@ pub fn verify(
         return Err(LifecycleError::InvalidRequest);
     }
     let backup = read_backup(path)?;
+    verify_artifact(backup, expected, protection)
+}
+
+pub(crate) fn verify_artifact(
+    backup: EncryptedIdentityBackup,
+    expected: Option<IdentityId>,
+    protection: &[u8],
+) -> Result<VerifiedBackup, LifecycleError> {
+    if protection.is_empty() {
+        return Err(LifecycleError::AuthenticationRequired);
+    }
+    if protection.len() > 4096 {
+        return Err(LifecycleError::InvalidRequest);
+    }
     let root =
         backup.decrypt_root_secret(protection).map_err(|_| LifecycleError::AuthenticationFailed)?;
     let public_key = identity_pubkey(&root);

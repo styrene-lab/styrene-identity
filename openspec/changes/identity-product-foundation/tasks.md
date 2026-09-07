@@ -32,8 +32,8 @@
 - [x] Implement ID01–ID03 public reads and real CLI process tests with explicit catalog absence and no implicit unlock.
 - [x] Implement ID04–ID08 file-custody catalog CRUD, local preference, non-destructive forget, and revision conflict tests.
 - [x] Define and implement the first mutation journal, ownership, retention, idempotency binding, and ID44/ID45 observation/reconciliation needed by those operations.
-- [ ] Implement ID30–ID36 authenticated backup CRUD with non-overwrite, partial catalog failure, reprotection, and changed-artifact deletion cases.
-- [ ] Before backup writes, persist recoverable staging ownership for existing-root ciphertext; test interruption, cleanup uncertainty, and preservation of a possible last recovery copy.
+- [x] Implement ID30–ID36 authenticated backup CRUD with non-overwrite, partial catalog failure, reprotection, and changed-artifact deletion cases.
+- [x] Before backup writes, persist recoverable staging ownership for existing-root ciphertext; test interruption, cleanup uncertainty, and preservation of a possible last recovery copy.
 - [x] Implement the ID31–ID32 non-mutating backup inspection/verification slice, including wrong identity, tamper, and unauthenticated-header evidence.
 - [ ] Implement supported ID09–ID16 custody operations; test wrong-identity attach, unsupported enrollment, reprotection interruption, and partial destruction cleanup.
 - [ ] Implement supported ID20–ID28 key/record operations; test immutable derivation descriptors, explicit private export, and no revocation claims from local deletion.

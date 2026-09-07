@@ -16,12 +16,181 @@ pub(crate) struct DirectoryIdentity {
     inode: u64,
 }
 
+#[cfg(feature = "file-custody")]
+pub(crate) type FileIdentity = DirectoryIdentity;
+
 pub(crate) struct Directory {
     file: File,
     path: PathBuf,
 }
 
 impl Directory {
+    #[cfg(feature = "file-custody")]
+    fn open_owned_file(
+        &self,
+        name: &str,
+        create: bool,
+        writable: bool,
+    ) -> Result<File, LifecycleError> {
+        self.check_bound()?;
+        self.require_owner(false)?;
+        #[cfg(unix)]
+        {
+            use rustix::fs::{Mode, OFlags};
+            let mut flags = (if writable { OFlags::RDWR } else { OFlags::RDONLY })
+                | OFlags::NOFOLLOW
+                | OFlags::NONBLOCK
+                | OFlags::CLOEXEC;
+            if create {
+                flags |= OFlags::CREATE | OFlags::EXCL;
+            }
+            let file = File::from(
+                rustix::fs::openat(&self.file, name, flags, Mode::RUSR | Mode::WUSR).map_err(
+                    |error| {
+                        if error == rustix::io::Errno::EXIST {
+                            LifecycleError::DestinationConflict
+                        } else {
+                            map_errno(error)
+                        }
+                    },
+                )?,
+            );
+            let metadata = file.metadata().map_err(|_| LifecycleError::OperationFailed)?;
+            if !metadata.is_file() {
+                return Err(LifecycleError::UnsafeStorage);
+            }
+            require_owner(&metadata, true, true)?;
+            Ok(file)
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = (name, create, writable);
+            Err(LifecycleError::UnsupportedOperation)
+        }
+    }
+
+    /// Reserve an empty name declared by a durable artifact intent. Existing
+    /// nonempty files are never adopted as unproven staging ownership.
+    #[cfg(feature = "file-custody")]
+    pub(crate) fn reserve_empty(&self, name: &str) -> Result<FileIdentity, LifecycleError> {
+        let file = match self.open_owned_file(name, true, true) {
+            Ok(file) => file,
+            Err(LifecycleError::DestinationConflict) => self.open_owned_file(name, false, true)?,
+            Err(error) => return Err(error),
+        };
+        let metadata = file.metadata().map_err(|_| LifecycleError::OperationFailed)?;
+        if metadata.len() != 0 {
+            return Err(LifecycleError::DestinationConflict);
+        }
+        file.sync_all().map_err(|_| LifecycleError::OperationFailed)?;
+        self.sync()?;
+        self.check_bound()?;
+        identity(&metadata)
+    }
+
+    #[cfg(feature = "file-custody")]
+    pub(crate) fn write_empty_owned(
+        &self,
+        name: &str,
+        expected: FileIdentity,
+        bytes: &[u8],
+    ) -> Result<(), LifecycleError> {
+        use std::io::Write;
+        let mut file = self.open_owned_file(name, false, true)?;
+        let metadata = file.metadata().map_err(|_| LifecycleError::OperationFailed)?;
+        if identity(&metadata)? != expected || metadata.len() != 0 {
+            return Err(LifecycleError::DestinationConflict);
+        }
+        file.write_all(bytes)
+            .and_then(|()| file.sync_all())
+            .map_err(|_| LifecycleError::OperationFailed)?;
+        self.check_bound()
+    }
+
+    #[cfg(feature = "file-custody")]
+    pub(crate) fn snapshot_owned(
+        &self,
+        name: &str,
+        max: u64,
+    ) -> Result<(FileIdentity, Vec<u8>), LifecycleError> {
+        let file = self.open_owned_file(name, false, false)?;
+        let object = identity(&file.metadata().map_err(|_| LifecycleError::OperationFailed)?)?;
+        let bytes = read_bounded(file, max)?;
+        self.check_bound()?;
+        Ok((object, bytes))
+    }
+
+    #[cfg(feature = "file-custody")]
+    pub(crate) fn snapshot_expected(
+        &self,
+        name: &str,
+        expected: FileIdentity,
+        max: u64,
+    ) -> Result<(FileIdentity, Vec<u8>), LifecycleError> {
+        let file = self.open_owned_file(name, false, false)?;
+        let object = identity(&file.metadata().map_err(|_| LifecycleError::OperationFailed)?)?;
+        if object != expected {
+            return Err(LifecycleError::DestinationConflict);
+        }
+        let bytes = read_bounded(file, max)?;
+        self.check_bound()?;
+        Ok((object, bytes))
+    }
+
+    #[cfg(feature = "file-custody")]
+    pub(crate) fn rename_exclusive(&self, from: &str, to: &str) -> Result<(), LifecycleError> {
+        self.require_owner(false)?;
+        self.check_bound()?;
+        #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
+        {
+            rustix::fs::renameat_with(
+                &self.file,
+                from,
+                &self.file,
+                to,
+                rustix::fs::RenameFlags::NOREPLACE,
+            )
+            .map_err(|error| {
+                if error == rustix::io::Errno::EXIST {
+                    LifecycleError::DestinationConflict
+                } else {
+                    map_errno(error)
+                }
+            })?;
+            self.sync()?;
+            self.check_bound()
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
+        {
+            let _ = (from, to);
+            Err(LifecycleError::UnsupportedOperation)
+        }
+    }
+
+    /// Remove only a verified owned object. Callers quarantine a managed artifact
+    /// before this step so a replacement at its public name is never deleted.
+    #[cfg(feature = "file-custody")]
+    pub(crate) fn remove_owned(
+        &self,
+        name: &str,
+        expected: FileIdentity,
+    ) -> Result<(), LifecycleError> {
+        let file = self.open_owned_file(name, false, false)?;
+        if identity(&file.metadata().map_err(|_| LifecycleError::OperationFailed)?)? != expected {
+            return Err(LifecycleError::DestinationConflict);
+        }
+        #[cfg(unix)]
+        {
+            rustix::fs::unlinkat(&self.file, name, rustix::fs::AtFlags::empty())
+                .map_err(map_errno)?;
+            self.sync()?;
+            self.check_bound()
+        }
+        #[cfg(not(unix))]
+        {
+            Err(LifecycleError::UnsupportedOperation)
+        }
+    }
     pub(crate) fn open(path: &Path) -> Result<Self, LifecycleError> {
         #[cfg(unix)]
         {

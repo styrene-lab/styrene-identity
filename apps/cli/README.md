@@ -30,7 +30,9 @@ Forgetting removes catalog references; custody destruction remains unimplemented
 `backup verify <file> [--expect-identity <id>] --passphrase-stdin` authenticates the
 payload and returns the canonical identity, without modifying the artifact.
 The current format header is not authenticated, even when the payload is valid.
-Export, restore, reprotection, and managed-artifact removal remain planned.
+Managed export, restore, reprotection, inventory, removal, and legacy recovery
+migration are implemented. See [backup management](../../docs/backup-management.md)
+for the two-role protection input and staging/compatibility protocol.
 
 ## Output and failures
 

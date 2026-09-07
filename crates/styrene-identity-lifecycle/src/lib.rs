@@ -78,6 +78,10 @@ pub enum LifecycleError {
     LocationChanged,
     #[error("encrypted backup format or size is invalid")]
     InvalidBackup,
+    #[error("operation was superseded by a verified recovery migration")]
+    OperationSuperseded,
+    #[error("managed backup artifact was not found")]
+    ArtifactNotFound,
 }
 
 /// Application operations, rather than custody-provider capabilities.
@@ -105,9 +109,19 @@ pub fn capabilities() -> ServiceCapabilities {
             "identity.select",
             "identity.forget",
             "operation.show",
+            "operation.list",
             "operation.reconcile",
             "backup.inspect",
             "backup.verify",
+            "backup.export",
+            "backup.reprotect",
+            "backup.restore",
+            "backup.list",
+            "backup.show",
+            "backup.forget",
+            "backup.delete",
+            "backup.verify-recovery",
+            "backup.migrate-recovery",
         ],
         #[cfg(all(
             feature = "file-custody",

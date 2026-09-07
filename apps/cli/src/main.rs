@@ -8,6 +8,9 @@ use serde::Serialize;
 use serde_json::Value;
 use styrene_identity::IdentityId;
 use styrene_identity_lifecycle::backups;
+use styrene_identity_lifecycle::mutations::artifacts::{
+    self, BackupFailure, BackupMutation, BackupResult,
+};
 use styrene_identity_lifecycle::mutations::{
     self, Mutation, MutationFailure, MutationResult, NameChange,
 };
@@ -126,13 +129,16 @@ enum CustodyKind {
 
 #[derive(Subcommand)]
 enum OperationCommand {
+    List { #[arg(long)] all: bool },
     Show {
         operation: String,
     },
     Reconcile {
         operation: String,
-        #[arg(long)]
+        #[arg(long, conflicts_with = "protection_stdin")]
         passphrase_stdin: bool,
+        #[arg(long)]
+        protection_stdin: bool,
     },
 }
 
@@ -147,6 +153,80 @@ enum BackupCommand {
         expect_identity: Option<IdentityId>,
         #[arg(long)]
         passphrase_stdin: bool,
+    },
+    Export {
+        entry: String,
+        #[arg(long)]
+        output_file: PathBuf,
+        #[arg(long)]
+        expect_identity: IdentityId,
+        #[arg(long)]
+        request_id: String,
+        #[arg(long)]
+        protection_stdin: bool,
+    },
+    Reprotect {
+        input: PathBuf,
+        #[arg(long)]
+        output_file: PathBuf,
+        #[arg(long)]
+        expect_identity: IdentityId,
+        #[arg(long)]
+        request_id: String,
+        #[arg(long)]
+        protection_stdin: bool,
+    },
+    Restore {
+        input: PathBuf,
+        #[arg(long)]
+        destination: PathBuf,
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        expect_identity: IdentityId,
+        #[arg(long)]
+        request_id: String,
+        #[arg(long)]
+        protection_stdin: bool,
+    },
+    VerifyRecovery {
+        operation: String,
+        #[arg(long)]
+        expect_identity: Option<IdentityId>,
+        #[arg(long)]
+        passphrase_stdin: bool,
+    },
+    MigrateRecovery {
+        operation: String,
+        #[arg(long)]
+        output_file: PathBuf,
+        #[arg(long)]
+        expect_identity: IdentityId,
+        #[arg(long)]
+        request_id: String,
+        #[arg(long)]
+        protection_stdin: bool,
+    },
+    List {
+        #[arg(long)]
+        identity: Option<IdentityId>,
+    },
+    Show {
+        artifact: String,
+    },
+    Forget {
+        artifact: String,
+        #[arg(long)]
+        expect_digest: String,
+        #[arg(long)]
+        request_id: String,
+    },
+    Delete {
+        artifact: String,
+        #[arg(long)]
+        expect_digest: String,
+        #[arg(long)]
+        request_id: String,
     },
 }
 
@@ -177,6 +257,16 @@ impl From<MutationFailure> for ClientFailure {
             error: failure.error,
             operation_id: failure.operation_id,
             effects: serde_json::to_value(failure.effects).unwrap_or(Value::Null),
+        }
+    }
+}
+
+impl From<BackupFailure> for ClientFailure {
+    fn from(failure: BackupFailure) -> Self {
+        Self {
+            error: failure.error,
+            operation_id: failure.operation_id,
+            effects: serde_json::json!({"backup":"unknown", "catalog":"unknown", "custody":"unknown", "phase":failure.phase}),
         }
     }
 }
@@ -250,6 +340,7 @@ fn main() -> ExitCode {
         Command::Operation { command: OperationCommand::Show { operation } } => {
             ("operation.show", serde_json::json!({"operation_id":operation}))
         }
+        Command::Operation { command: OperationCommand::List {..} } => ("operation.list",Value::Null),
         Command::Operation { command: OperationCommand::Reconcile { operation, .. } } => {
             ("operation.reconcile", serde_json::json!({"operation_id":operation}))
         }
@@ -260,10 +351,32 @@ fn main() -> ExitCode {
             "backup.verify",
             serde_json::json!({"expected_identity_id": expect_identity.map(|id| id.to_string())}),
         ),
+        Command::Backup { command: BackupCommand::Export { .. } } => ("backup.export", Value::Null),
+        Command::Backup { command: BackupCommand::Reprotect { .. } } => {
+            ("backup.reprotect", Value::Null)
+        }
+        Command::Backup { command: BackupCommand::Restore { .. } } => {
+            ("backup.restore", Value::Null)
+        }
+        Command::Backup { command: BackupCommand::VerifyRecovery { .. } } => {
+            ("backup.verify-recovery", Value::Null)
+        }
+        Command::Backup { command: BackupCommand::MigrateRecovery { .. } } => {
+            ("backup.migrate-recovery", Value::Null)
+        }
+        Command::Backup { command: BackupCommand::List { .. } } => ("backup.list", Value::Null),
+        Command::Backup { command: BackupCommand::Show { .. } } => ("backup.show", Value::Null),
+        Command::Backup { command: BackupCommand::Forget { .. } } => ("backup.forget", Value::Null),
+        Command::Backup { command: BackupCommand::Delete { .. } } => ("backup.delete", Value::Null),
     };
-    if matches!(cli.command, Command::Identity { .. } | Command::Operation { .. })
-        && cli.store.is_none()
-    {
+    let needs_store = !matches!(
+        cli.command,
+        Command::Capabilities
+            | Command::Backup {
+                command: BackupCommand::Inspect { .. } | BackupCommand::Verify { .. }
+            }
+    );
+    if needs_store && cli.store.is_none() {
         return emit(
             &failure(
                 command,
@@ -298,13 +411,14 @@ fn main() -> ExitCode {
             } else {
                 match error {
                     LifecycleError::CatalogUninitialized | LifecycleError::EntryNotFound => 3,
-                    LifecycleError::OperationNotFound => 3,
+                    LifecycleError::OperationNotFound | LifecycleError::ArtifactNotFound => 3,
                     LifecycleError::CatalogUnavailable
                     | LifecycleError::UnsupportedSchema
                     | LifecycleError::IdentityUnavailable
                     | LifecycleError::CustodyUnavailable
                     | LifecycleError::UnsupportedOperation
-                    | LifecycleError::UnsafeStorage => 4,
+                    | LifecycleError::UnsafeStorage
+                    | LifecycleError::OperationSuperseded => 4,
                     LifecycleError::AuthenticationRequired
                     | LifecycleError::AuthenticationFailed => 5,
                     LifecycleError::AmbiguousName
@@ -408,12 +522,33 @@ fn execute(cli: &Cli) -> Result<Success, ClientFailure> {
         Command::Operation { command } => {
             let store = cli.store.as_deref().ok_or(LifecycleError::CatalogUnavailable)?;
             match command {
+                OperationCommand::List {all} => read_result(mutations::list_operations(store,*all)?),
                 OperationCommand::Show { operation } => {
-                    read_result(mutations::show_operation(store, operation)?)
+                    if operation.starts_with("backup-op-") {
+                        read_result(artifacts::show_operation(store, operation)?)
+                    } else {
+                        read_result(mutations::show_operation(store, operation)?)
+                    }
                 }
-                OperationCommand::Reconcile { operation, passphrase_stdin } => {
-                    let protection = read_protection(*passphrase_stdin)?;
-                    mutation_result(mutations::reconcile(store, operation, &protection)?)
+                OperationCommand::Reconcile { operation, passphrase_stdin, protection_stdin } => {
+                    if operation.starts_with("backup-op-") {
+                        if *passphrase_stdin {
+                            return Err(LifecycleError::InvalidRequest.into());
+                        }
+                        let protection = read_protections(*protection_stdin)?;
+                        artifact_result(artifacts::reconcile(
+                            store,
+                            operation,
+                            protection.source(),
+                            protection.destination(),
+                        )?)
+                    } else {
+                        if *protection_stdin {
+                            return Err(LifecycleError::InvalidRequest.into());
+                        }
+                        let protection = read_protection(*passphrase_stdin)?;
+                        mutation_result(mutations::reconcile(store, operation, &protection)?)
+                    }
                 }
             }
         }
@@ -424,11 +559,185 @@ fn execute(cli: &Cli) -> Result<Success, ClientFailure> {
                     let protection = read_protection(*passphrase_stdin)?;
                     read_result(backups::verify(input, *expect_identity, &protection)?)
                 }
+                BackupCommand::VerifyRecovery { operation, expect_identity, passphrase_stdin } => {
+                    let protection = read_protection(*passphrase_stdin)?;
+                    read_result(artifacts::verify_recovery(
+                        cli.store.as_deref().ok_or(LifecycleError::CatalogUnavailable)?,
+                        operation,
+                        *expect_identity,
+                        &protection,
+                    )?)
+                }
+                BackupCommand::List { identity } => read_result(artifacts::list(
+                    cli.store.as_deref().ok_or(LifecycleError::CatalogUnavailable)?,
+                    *identity,
+                )?),
+                BackupCommand::Show { artifact } => read_result(artifacts::show(
+                    cli.store.as_deref().ok_or(LifecycleError::CatalogUnavailable)?,
+                    artifact,
+                )?),
+                command => return execute_backup_mutation(cli, command),
             }?;
             result.effects["backup"] = serde_json::json!("unchanged");
             Ok(result)
         }
     }
+}
+
+fn execute_backup_mutation(cli: &Cli, command: &BackupCommand) -> Result<Success, ClientFailure> {
+    let store = cli.store.as_deref().ok_or(LifecycleError::CatalogUnavailable)?;
+    let (request_id, request, input) = match command {
+        BackupCommand::Export {
+            entry,
+            output_file,
+            expect_identity,
+            request_id,
+            protection_stdin,
+        } => (
+            request_id,
+            BackupMutation::Export {
+                entry_id: entry.clone(),
+                output: output_file.clone(),
+                expected_identity: *expect_identity,
+            },
+            *protection_stdin,
+        ),
+        BackupCommand::Reprotect {
+            input,
+            output_file,
+            expect_identity,
+            request_id,
+            protection_stdin,
+        } => (
+            request_id,
+            BackupMutation::Reprotect {
+                input: input.clone(),
+                output: output_file.clone(),
+                expected_identity: *expect_identity,
+            },
+            *protection_stdin,
+        ),
+        BackupCommand::Restore {
+            input,
+            destination,
+            name,
+            expect_identity,
+            request_id,
+            protection_stdin,
+        } => (
+            request_id,
+            BackupMutation::Restore {
+                input: input.clone(),
+                destination: destination.clone(),
+                name: name.clone(),
+                expected_identity: *expect_identity,
+            },
+            *protection_stdin,
+        ),
+        BackupCommand::MigrateRecovery {
+            operation,
+            output_file,
+            expect_identity,
+            request_id,
+            protection_stdin,
+        } => (
+            request_id,
+            BackupMutation::MigrateRecovery {
+                source_operation: operation.clone(),
+                output: output_file.clone(),
+                expected_identity: *expect_identity,
+            },
+            *protection_stdin,
+        ),
+        BackupCommand::Forget { artifact, expect_digest, request_id } => (
+            request_id,
+            BackupMutation::Forget {
+                artifact_id: artifact.clone(),
+                expected_digest: expect_digest.clone(),
+            },
+            false,
+        ),
+        BackupCommand::Delete { artifact, expect_digest, request_id } => (
+            request_id,
+            BackupMutation::Delete {
+                artifact_id: artifact.clone(),
+                expected_digest: expect_digest.clone(),
+            },
+            false,
+        ),
+        _ => return Err(LifecycleError::InvalidRequest.into()),
+    };
+    let protection = read_protections(input)?;
+    artifact_result(artifacts::execute(
+        store,
+        request_id,
+        request,
+        protection.source(),
+        protection.destination(),
+    )?)
+}
+
+fn artifact_result(result: BackupResult) -> Result<Success, ClientFailure> {
+    let operation_id = Some(result.operation_id.clone());
+    let effects = serde_json::json!({"backup":result.effect,"catalog":if result.entry_id.is_some(){"registered"}else{"unchanged"},"custody":if result.effect=="restored"{"restored_or_already_present"}else{"unchanged"}});
+    let value = serde_json::to_value(&result).map_err(|_| ClientFailure {
+        error: LifecycleError::OperationFailed,
+        operation_id: operation_id.clone(),
+        effects: effects.clone(),
+    })?;
+    Ok(Success { value, operation_id, effects })
+}
+
+struct ProtectionInputs {
+    bytes: Zeroizing<Vec<u8>>,
+    source_end: usize,
+    destination_start: usize,
+}
+impl ProtectionInputs {
+    fn source(&self) -> &[u8] {
+        &self.bytes[..self.source_end]
+    }
+    fn destination(&self) -> &[u8] {
+        &self.bytes[self.destination_start..]
+    }
+}
+
+fn read_protections(enabled: bool) -> Result<ProtectionInputs, LifecycleError> {
+    if !enabled {
+        return Ok(ProtectionInputs {
+            bytes: Zeroizing::new(vec![]),
+            source_end: 0,
+            destination_start: 0,
+        });
+    }
+    let stdin = io::stdin();
+    if stdin.is_terminal() {
+        return Err(LifecycleError::AuthenticationRequired);
+    }
+    let mut bytes = Zeroizing::new(Vec::with_capacity(8197));
+    stdin
+        .lock()
+        .take(8197)
+        .read_to_end(&mut bytes)
+        .map_err(|_| LifecycleError::AuthenticationRequired)?;
+    if bytes.last() == Some(&b'\n') {
+        bytes.pop();
+        if bytes.last() == Some(&b'\r') {
+            bytes.pop();
+        }
+    }
+    let split =
+        bytes.iter().position(|byte| *byte == b'\n').ok_or(LifecycleError::InvalidRequest)?;
+    let source_end = if split > 0 && bytes[split - 1] == b'\r' { split - 1 } else { split };
+    let destination_start = split + 1;
+    if source_end > 4096
+        || bytes.len() - destination_start > 4096
+        || bytes[..source_end].contains(&b'\r')
+        || bytes[destination_start..].iter().any(|byte| matches!(byte, b'\r' | b'\n'))
+    {
+        return Err(LifecycleError::InvalidRequest);
+    }
+    Ok(ProtectionInputs { bytes, source_end, destination_start })
 }
 
 fn read_result(value: impl Serialize) -> Result<Success, ClientFailure> {
