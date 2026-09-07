@@ -6,7 +6,6 @@
 //!
 //! All intermediate seed material is zeroized after extracting the public key.
 
-use ed25519_dalek::Verifier;
 use zeroize::Zeroizing;
 
 use crate::IdentityId;
@@ -67,6 +66,8 @@ impl IdentityInfo {
 ///
 /// Contains everything a verifier needs to check a signature without
 /// holding the root secret or fetching the pubkey from a separate channel.
+/// The expected identity and authorization policy must come from an independent
+/// trusted context, not from the attestation's own claims.
 #[derive(Debug, Clone)]
 pub struct SignedAttestation {
     /// The 32-character hex identity hash of the signer.
@@ -75,6 +76,17 @@ pub struct SignedAttestation {
     pub pubkey: [u8; 32],
     /// The 64-byte Ed25519 signature over the attested data.
     pub signature: [u8; 64],
+}
+
+impl SignedAttestation {
+    /// Check strict signature validity and canonical attribution to an independently
+    /// selected identity. Protocol framing, replay protection, and authorization
+    /// remain the caller's responsibility.
+    pub fn verify_for(&self, expected_identity: IdentityId, data: &[u8]) -> bool {
+        self.hash.parse::<IdentityId>().is_ok_and(|claimed| claimed == expected_identity)
+            && expected_identity.matches_public_key(&self.pubkey)
+            && identity_verify(&self.pubkey, data, &self.signature)
+    }
 }
 
 /// Sign arbitrary data with the identity's Ed25519 signing key.
@@ -99,12 +111,14 @@ pub fn identity_sign(root: &RootSecret, data: &[u8]) -> SignedAttestation {
 ///
 /// No root secret needed — works with just the 32-byte verifying key
 /// (e.g. the `pubkey` field embedded in a signed profile).
+/// Uses strict Ed25519 verification, rejecting weak public keys and signature
+/// points. Hash consistency alone does not establish a usable signing identity.
 pub fn identity_verify(pubkey: &[u8; 32], data: &[u8], signature: &[u8; 64]) -> bool {
     let Ok(vk) = ed25519_dalek::VerifyingKey::from_bytes(pubkey) else {
         return false;
     };
     let sig = ed25519_dalek::Signature::from_bytes(signature);
-    vk.verify(data, &sig).is_ok()
+    vk.verify_strict(data, &sig).is_ok()
 }
 
 // ── Public identity (no secrets) ──────────────────────────────────────────
@@ -150,15 +164,46 @@ impl PublicIdentity {
             .is_ok_and(|claimed| claimed.matches_public_key(&self.pubkey))
     }
 
-    /// Verify a signature over `data` using this identity's public key.
+    /// Verify a strict signature and this object's hash/public-key consistency.
+    /// This does not establish that a caller should trust or authorize this identity.
     pub fn verify(&self, data: &[u8], signature: &[u8; 64]) -> bool {
-        identity_verify(&self.pubkey, data, signature)
+        self.verify_hash(&self.hash) && identity_verify(&self.pubkey, data, signature)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn identity_verify_rejects_identity_point_forgeries() {
+        // Compressed identity point A = R = (0, 1), S = 0. A permissive
+        // verifier accepts this equation for every message without a secret.
+        let mut public_key = [0; 32];
+        public_key[0] = 1;
+        let mut signature = [0; 64];
+        signature[0] = 1;
+        for message in [b"profile".as_slice(), b"different authorization".as_slice()] {
+            assert!(!identity_verify(&public_key, message, &signature));
+            let public = PublicIdentity::from_pubkey(public_key);
+            assert!(public.verify_hash(&public.hash), "hash consistency is not possession");
+            assert!(!public.verify(message, &signature));
+        }
+    }
+
+    #[test]
+    fn attestation_verification_binds_independently_expected_identity() {
+        let attestation = identity_sign(&RootSecret::new([42; 32]), b"scoped operation");
+        let expected = IdentityId::from_public_key(&attestation.pubkey);
+        assert!(attestation.verify_for(expected, b"scoped operation"));
+        assert!(!attestation.verify_for(IdentityId::from_bytes([0; 16]), b"scoped operation"));
+        assert!(!attestation.verify_for(expected, b"other operation"));
+        let mut inconsistent = attestation.clone();
+        inconsistent.hash = "00".repeat(16);
+        assert!(!inconsistent.verify_for(expected, b"scoped operation"));
+        let public = PublicIdentity { hash: inconsistent.hash, pubkey: attestation.pubkey };
+        assert!(!public.verify(b"scoped operation", &attestation.signature));
+    }
 
     fn test_root(fill: u8) -> RootSecret {
         RootSecret::new([fill; 32])
