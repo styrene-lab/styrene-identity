@@ -10,8 +10,9 @@ The standalone CLI and UI must support identity work without a mesh installation
 or running daemon. The same backend operations must serve both interfaces.
 The Mesh application retains its small operating surface and runtime ownership.
 
-The Identity library, public catalog backend, Unix file-backed catalog CRUD,
-and CLI recovery commands are implemented. UI and advanced custody boundaries remain proposed in the
+The Identity library, file-backed catalog/backup backend, CLI, shared Dioxus page,
+standalone desktop shell, and mock host are implemented. Actual Mesh integration
+and advanced custody boundaries remain proposed in the
 [product foundation change](../openspec/changes/identity-product-foundation/proposal.md).
 The [provider contract change](../openspec/changes/identity-provider-contract/proposal.md)
 defines a prerequisite capability and custody boundary.
@@ -33,7 +34,8 @@ contracts. A plugin transport, if selected later, belongs at that outer boundary
 
 ## Workspace shape and remaining packages
 
-The root library, `crates/styrene-identity-lifecycle`, and `apps/cli` are workspace
+The root library, `crates/styrene-identity-lifecycle`, `crates/styrene-identity-ui`,
+`apps/cli`, and `apps/desktop` are workspace
 members. The root library is the only default member, preserving library-only
 commands. Application packages are development-only (`publish = false`) until
 release review; they use versions independently from the root library.

@@ -155,37 +155,62 @@ pub struct OperationView {
 }
 
 #[derive(Clone, Debug, Serialize)]
-#[serde(tag="family",content="operation",rename_all="snake_case")]
+#[serde(tag = "family", content = "operation", rename_all = "snake_case")]
 pub enum ObservedOperation {
     Catalog(OperationView),
     Backup(artifacts::BackupOperationView),
 }
 
 impl ObservedOperation {
-    pub fn id(&self)->&str {match self {Self::Catalog(view)=>&view.operation_id,Self::Backup(view)=>&view.operation_id}}
-    pub fn pending(&self)->bool {match self {Self::Catalog(view)=>view.state==OperationState::Prepared,Self::Backup(view)=>view.phase!=artifacts::BackupPhase::Completed}}
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Catalog(view) => &view.operation_id,
+            Self::Backup(view) => &view.operation_id,
+        }
+    }
+    pub fn pending(&self) -> bool {
+        match self {
+            Self::Catalog(view) => view.state == OperationState::Prepared,
+            Self::Backup(view) => view.phase != artifacts::BackupPhase::Completed,
+        }
+    }
 }
 
 /// Read operation history without replaying work or loading credentials.
-pub fn list_operations(store:&Path,include_completed:bool)->Result<Vec<ObservedOperation>,LifecycleError>{
-    let root=Directory::open(store)?;
-    let mut result=Vec::new();
-    match root.child("operations",false){
-        Ok(directory)=>for name in directory.names()?{
-            if name==".artifact-store-v3.json"{continue}
-            if let Some(id)=name.strip_suffix(".json"){
-                if result.len()>=MAX_OPERATIONS{return Err(LifecycleError::OperationFailed)}
-                let journal=parse_journal(&directory.read(std::ffi::OsStr::new(&name),MAX_JOURNAL_BYTES,true)?)?;
-                if journal.operation_id!=id{return Err(LifecycleError::OperationFailed)}
-                result.push(ObservedOperation::Catalog(journal.view()));
+pub fn list_operations(
+    store: &Path,
+    include_completed: bool,
+) -> Result<Vec<ObservedOperation>, LifecycleError> {
+    let root = Directory::open(store)?;
+    let mut result = Vec::new();
+    match root.child("operations", false) {
+        Ok(directory) => {
+            for name in directory.names()? {
+                if name == ".artifact-store-v3.json" {
+                    continue;
+                }
+                if let Some(id) = name.strip_suffix(".json") {
+                    if result.len() >= MAX_OPERATIONS {
+                        return Err(LifecycleError::OperationFailed);
+                    }
+                    let journal = parse_journal(&directory.read(
+                        std::ffi::OsStr::new(&name),
+                        MAX_JOURNAL_BYTES,
+                        true,
+                    )?)?;
+                    if journal.operation_id != id {
+                        return Err(LifecycleError::OperationFailed);
+                    }
+                    result.push(ObservedOperation::Catalog(journal.view()));
+                }
             }
-        },
-        Err(LifecycleError::OperationNotFound)=>{},
-        Err(error)=>return Err(error),
+        }
+        Err(LifecycleError::OperationNotFound) => {}
+        Err(error) => return Err(error),
     }
     result.extend(artifacts::operation_views(store)?.into_iter().map(ObservedOperation::Backup));
-    result.retain(|view|include_completed||view.pending());
-    result.sort_by(|a,b|a.id().cmp(b.id()));
+    result.retain(|view| include_completed || view.pending());
+    result.sort_by(|a, b| a.id().cmp(b.id()));
     Ok(result)
 }
 

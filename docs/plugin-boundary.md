@@ -1,6 +1,7 @@
 # Identity lifecycle plugin: direction and next gate
 
-Status: design direction accepted; plugin/provider integration is not implemented.
+Status: the read-only page/client, concrete lifecycle model, standalone shell, and
+mock host are implemented. Actual Mesh host adoption remains pending.
 This document preserves the product decisions needed by an agent in this checkout.
 It does not define an approved ABI or authorize a particular packaging mechanism.
 
@@ -30,9 +31,10 @@ typed read-only client. See the
 [committed handoff](ui-integration-inventory.md#committed-host-design-handoff).
 Runtime installation, isolation, and broader plugin machinery remain deferred.
 
-The first [read-only overview API](read-only-overview.md) and isolated mock
-consumer are implemented for contract review. Production provider adapters,
-host registration, and UI lifecycle behavior remain pending.
+The [read-only overview API](read-only-overview.md), catalog source, shared Dioxus
+page, and [standalone/mock-host composition](../apps/desktop/README.md) are implemented.
+The [UI handoff](handoffs/2026-09-07-ui.md) distinguishes those software results
+from actual Mesh registration, native-control, and device acceptance still pending.
 
 ## Existing primitives and missing orchestration
 

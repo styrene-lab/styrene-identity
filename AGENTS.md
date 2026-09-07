@@ -5,9 +5,9 @@ cryptography, derivation, custody adapters, signed records, and identity backup
 formats. Canonical origin: `https://github.com/styrene-lab/styrene-identity`.
 The planned product also includes a shared lifecycle backend, CLI, standalone
 Identity UI, and optional Mesh integration. See `docs/product-architecture.md`.
-The backend and CLI implement public reads and Unix file-backed catalog CRUD with
-durable recovery. See `docs/file-custody-crud.md`. Advanced custody and UI workflows
-remain pending. The root library is the only default workspace member.
+The backend and CLI implement catalog/backup CRUD and durable recovery. The shared
+Dioxus page and standalone desktop shell live here; actual Mesh host adoption and
+advanced custody remain pending. The root library is the only default member.
 Work from this checkout; no sibling checkout or comms-lab installation is required.
 Preserve existing work and inspect `git status --short` before edits.
 
@@ -35,6 +35,8 @@ note distinguishes those proposals from current behavior.
 | Read-only application overview | `src/overview.rs`, `docs/read-only-overview.md`, `tests/overview_consumer.rs` |
 | Lifecycle backend and public catalog | `crates/styrene-identity-lifecycle/`, `docs/catalog-schema.md` |
 | CLI and process acceptance | `apps/cli/`, `docs/cli-lifecycle.md` |
+| Shared page and standalone desktop | `crates/styrene-identity-ui/`, `apps/desktop/` |
+| Release checks and evidence | `scripts/`, `RELEASE.md`, `docs/dependency-policy.md` |
 | Derivation and canonical identity | `src/derive.rs`, `src/identity.rs`, `src/identity_id.rs` |
 | Custody interface and selection | `src/signer.rs` |
 | Encrypted storage and portable recovery | `src/file_signer.rs`, `src/vault.rs` |

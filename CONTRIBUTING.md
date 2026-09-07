@@ -4,17 +4,25 @@ This crate is a standalone Cargo workspace. `rust-toolchain.toml` pins Rust
 1.97.0; `Cargo.toml` specifies edition 2024 and Rust 1.97. Use the committed
 lockfile. No parent workspace, daemon, UI, or lab host is needed for software tests.
 
-The root library remains the default workspace member. The read-only lifecycle
-backend and CLI are additional members with explicit CI lanes. Run their checks:
+The root library remains the default workspace member. Lifecycle, CLI, shared UI,
+and standalone desktop packages are additional members with explicit lanes:
 
 ```sh
 cargo test --locked -p styrene-identity-lifecycle -p styrene-identity-cli
 cargo check --locked -p styrene-identity-lifecycle --no-default-features
 cargo clippy --locked -p styrene-identity-lifecycle -p styrene-identity-cli --all-targets -- -D warnings
+cargo test --locked -p styrene-identity-ui -p styrene-identity-desktop
 ```
 
 `cargo test --workspace --locked` includes both application packages. A root-only
 `cargo test --locked` does not prove their process contracts.
+
+Use `scripts/validate.sh` for the complete software matrix. It defaults to two
+test threads because the Argon2 recovery corpus is memory-intensive. Override
+`IDENTITY_TEST_THREADS` deliberately when collecting new evidence. Native desktop
+builds require `--features desktop`; they are not implied by headless workspace tests.
+Use `scripts/package-candidate.sh` from a clean committed tree to package the core,
+CLI, and supported native app with checksums and target-filtered dependency results.
 
 The CLI enables the backend's optional `file-custody` feature. Combined application
 tests exercise mutation recovery on Unix. A backend-only build with no default
@@ -110,9 +118,11 @@ revision, not the current maintenance tree.
 
 ## Consumer handoff and publication
 
-The proposed repository-wide [release workflow](RELEASE.md) covers package SemVer,
-CLI automation, application distribution, and plugin compatibility. Its automation
-and first-release inventory remain pending in the product foundation OpenSpec.
+The repository-wide [release workflow](RELEASE.md) covers package SemVer,
+CLI automation, application distribution, and plugin compatibility. Candidate
+automation and registry publication are separate. The first
+registry inventory and current dependency decisions are recorded in
+`docs/release-inventory.md` and `docs/dependency-policy.md`.
 
 1. Commit the reviewed change and retain its validation results.
 2. Provide the full Identity Git SHA, API/feature impact, and any migration need.
@@ -122,7 +132,8 @@ and first-release inventory remain pending in the product foundation OpenSpec.
 
 A floating branch, package version string, or successful crate build does not
 establish which Identity source a consumer used. The initial extracted Git pin
-is recorded in README. New pins need their own evidence.
+is recorded in extraction provenance; README now pins the validated development
+checkpoint. New pins need their own evidence.
 
 There is no crates.io publishing job. Registry publication and version selection
 are a separate release decision; do not publish merely to make a consumer import

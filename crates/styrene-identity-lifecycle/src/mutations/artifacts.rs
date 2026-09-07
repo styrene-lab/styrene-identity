@@ -269,12 +269,12 @@ pub fn show_operation(
     Ok(load(&directory, operation_id)?.view())
 }
 
-pub(super) fn operation_views(store:&Path)->Result<Vec<BackupOperationView>,LifecycleError>{
-    let root=Directory::open(store)?;
-    match root.child("artifacts",false){
-        Ok(directory)=>Ok(records(&directory)?.into_iter().map(|record|record.view()).collect()),
-        Err(LifecycleError::OperationNotFound)=>Ok(vec![]),
-        Err(error)=>Err(error),
+pub(super) fn operation_views(store: &Path) -> Result<Vec<BackupOperationView>, LifecycleError> {
+    let root = Directory::open(store)?;
+    match root.child("artifacts", false) {
+        Ok(directory) => Ok(records(&directory)?.into_iter().map(|record| record.view()).collect()),
+        Err(LifecycleError::OperationNotFound) => Ok(vec![]),
+        Err(error) => Err(error),
     }
 }
 

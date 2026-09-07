@@ -16,14 +16,14 @@ for standalone validation, [integration context](docs/integration-context.md)
 for repository ownership, and [the plugin boundary](docs/plugin-boundary.md)
 for the accepted direction and remaining design work.
 
-The Identity product now includes a shared lifecycle backend with public reads,
-file-backed catalog CRUD, and recovery, plus a
-development CLI. A standalone UI and optional Styrene Mesh UI integration remain
-planned. See the [CLI usage](apps/cli/README.md),
-[product architecture](docs/product-architecture.md) and proposed
+The Identity product includes a shared lifecycle backend, catalog and managed-backup
+CRUD, a CLI, an importable Dioxus overview page, and a standalone desktop shell.
+Actual Mesh host adoption and advanced custody/key-management operations remain
+separate work. See [CLI usage](apps/cli/README.md),
+[desktop usage](apps/desktop/README.md), [product architecture](docs/product-architecture.md), and
 [versioning and release workflow](RELEASE.md). See
 [file-backed CRUD](docs/file-custody-crud.md) for supported mutations. Advanced
-custody operations and UI application surfaces remain pending.
+custody operations and platform/device acceptance remain pending.
 
 The proposed [CLI CRUD lifecycle](docs/cli-lifecycle.md) maps identity, custody,
 key, backup, and lifecycle operations to the shared backend and acceptance cases.

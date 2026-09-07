@@ -13,8 +13,8 @@
 
 - [ ] Review the operation catalog with the provider-contract change and inventory existing CLI/UI consumer implementations for migration.
 - [ ] Approve package names, storage/concurrency/recovery contracts, and library-only default members before changing manifests.
-- [ ] Add the lifecycle backend and file-custody vertical slice with shared scenarios for creation, inspection, backup, restore, conflicts, and interruption.
-- [ ] Verify minimal library consumers exclude application dependencies and existing compatibility fixtures remain unchanged.
+- [x] Add the lifecycle backend and file-custody vertical slice with shared scenarios for creation, inspection, backup, restore, conflicts, and interruption.
+- [x] Verify minimal library consumers exclude application dependencies and existing compatibility fixtures remain unchanged.
 
 ## 3. CLI and standalone UI
 <!-- specs: lifecycle-product -->
@@ -23,6 +23,9 @@
 - [ ] Implement CLI adapters, help/examples/completions, noninteractive failure handling, and machine-output integration tests against shared backend scenarios.
 - [ ] Confirm the inventoried Dioxus baseline, exact renderer/Wry compatibility, first target platforms, accessibility, platform-service ownership, and packaging.
 - [ ] Implement standalone UI adapters and verify packaged create-inspect-backup-restore workflows without Mesh against the same backend outcomes.
+- [x] Implement the standalone Dioxus shell, bounded application worker, shared read-only page, and typed service parity tests.
+- [x] Build and observe the native macOS overview and explicit mock-host page with artifact/process/capture provenance.
+- [ ] Complete native lifecycle-control interaction after Assistive Access is available; retain distinct Linux/mobile/device lanes.
 - [ ] Test stale picker completions, share presentation without delivery confirmation, and app unlock without inferred custody evidence.
 
 ## 3a. Full CLI CRUD acceptance
@@ -38,13 +41,13 @@
 - [ ] Implement supported ID09–ID16 custody operations; test wrong-identity attach, unsupported enrollment, reprotection interruption, and partial destruction cleanup.
 - [ ] Implement supported ID20–ID28 key/record operations; test immutable derivation descriptors, explicit private export, and no revocation claims from local deletion.
 - [ ] Implement supported ID40–ID43 plans and successor records with stale-plan rejection and explicit unresolved consumer trust work.
-- [ ] Run the shared backend corpus and actual CLI subprocess cases for each shipped row, then expose the same typed outcomes to UI clients.
+- [x] Run the shared backend corpus and actual CLI subprocess cases for each shipped row, then expose the same typed outcomes to UI clients.
 
 ## 4. Optional Mesh integration
 <!-- specs: lifecycle-product -->
 
 - [ ] Agree summary/capability DTOs and one read-only request against UI design revision `a2baf72ecab685f324416f040879d356d53620b3`; record an immutable contract or mock-only status.
-- [ ] Implement the Identity-side read-only client and mock host tests for incompatible registration, absence, unavailable/error/retry, and no implicit unlock or mutation.
+- [x] Implement the Identity-side read-only client and mock host tests for incompatible registration, absence, unavailable/error/retry, and no implicit unlock or mutation.
 - [ ] Verify scope cleanup, stale results after selection/disable, repeated enable/navigation, and restart with enable preference only against the UI-owner lifecycle scenarios.
 - [ ] Before enabling one mutation, establish CLI/service acceptance, operation ID/outcome ownership, cancellation versus observation, and retained observation or blocked disable.
 - [ ] Hand off immutable Identity revisions to the Mesh owners and collect host integration results without changing their worktrees here.

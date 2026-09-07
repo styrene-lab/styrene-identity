@@ -129,7 +129,10 @@ enum CustodyKind {
 
 #[derive(Subcommand)]
 enum OperationCommand {
-    List { #[arg(long)] all: bool },
+    List {
+        #[arg(long)]
+        all: bool,
+    },
     Show {
         operation: String,
     },
@@ -340,7 +343,9 @@ fn main() -> ExitCode {
         Command::Operation { command: OperationCommand::Show { operation } } => {
             ("operation.show", serde_json::json!({"operation_id":operation}))
         }
-        Command::Operation { command: OperationCommand::List {..} } => ("operation.list",Value::Null),
+        Command::Operation { command: OperationCommand::List { .. } } => {
+            ("operation.list", Value::Null)
+        }
         Command::Operation { command: OperationCommand::Reconcile { operation, .. } } => {
             ("operation.reconcile", serde_json::json!({"operation_id":operation}))
         }
@@ -522,7 +527,9 @@ fn execute(cli: &Cli) -> Result<Success, ClientFailure> {
         Command::Operation { command } => {
             let store = cli.store.as_deref().ok_or(LifecycleError::CatalogUnavailable)?;
             match command {
-                OperationCommand::List {all} => read_result(mutations::list_operations(store,*all)?),
+                OperationCommand::List { all } => {
+                    read_result(mutations::list_operations(store, *all)?)
+                }
                 OperationCommand::Show { operation } => {
                     if operation.starts_with("backup-op-") {
                         read_result(artifacts::show_operation(store, operation)?)
