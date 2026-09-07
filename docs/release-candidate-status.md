@@ -1,5 +1,10 @@
 # Identity 0.4.0-rc.1 candidate status
 
+The evidence below describes the immutable RC.1 artifact. A later source follow-up
+adds private-key import rejection coverage and a guarded SSH advisory
+non-applicability decision in `docs/dependency-policy.md`. Those changes are not
+part of the RC.1 tag or uploaded package and require a new candidate before distribution.
+
 ## Software gate
 
 `scripts/validate.sh` passed on 2026-09-07 with Rust 1.97.0,

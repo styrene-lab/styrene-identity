@@ -13,7 +13,7 @@ target_dir="$(jq -r .target_directory <<<"$metadata")"
 version="$(jq -r '.packages[] | select(.name=="styrene-identity") | .version' <<<"$metadata")"
 out="$target_dir/release-evidence/$revision/$target"
 mkdir -p "$out"
-for profile in core repository pki cli; do
+for profile in core repository pki cli ssh; do
   scripts/check-dependencies.sh "$profile" "$target" 2>&1 | tee "$out/dependencies-$profile.log"
 done
 cargo package --locked -p styrene-identity

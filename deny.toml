@@ -17,6 +17,7 @@ confidence-threshold = 0.8
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+deny = [{ name = "rsa", wrappers = ["ssh-key"] }]
 
 [sources]
 unknown-registry = "deny"

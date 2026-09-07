@@ -296,9 +296,36 @@ mod tests {
         assert!(
             agent
                 .sign(SignRequest {
-                    pubkey: KeyData::Rsa(public),
+                    pubkey: KeyData::Rsa(public.clone()),
                     data: b"untrusted request".to_vec(),
                     flags: 0
+                })
+                .await
+                .is_err()
+        );
+        // Import paths retain no client-supplied private key. These are parser
+        // containers only; deliberately no RSA operation is performed on them.
+        let integer = || ssh_key::Mpint::from_bytes(&[1]).unwrap();
+        let identity = ssh_agent_lib::proto::AddIdentity {
+            credential: ssh_agent_lib::proto::Credential::Key {
+                privkey: ssh_key::private::KeypairData::Rsa(ssh_key::private::RsaKeypair {
+                    public,
+                    private: ssh_key::private::RsaPrivateKey {
+                        d: integer(),
+                        iqmp: integer(),
+                        p: integer(),
+                        q: integer(),
+                    },
+                }),
+                comment: "client-supplied fixture".into(),
+            },
+        };
+        assert!(agent.add_identity(identity.clone()).await.is_err());
+        assert!(
+            agent
+                .add_identity_constrained(ssh_agent_lib::proto::AddIdentityConstrained {
+                    identity,
+                    constraints: vec![]
                 })
                 .await
                 .is_err()
