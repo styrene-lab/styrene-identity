@@ -49,6 +49,11 @@ Consumers that admitted untrusted identities through the old verifier need to
 revalidate those records. No published version range or deployed consumer exposure
 has been established by this review.
 
+Follow-up on 2026-09-07 verified the published 0.3.2 archive checksum and confirmed
+the permissive verifier in that registry source. See
+[the release inventory](release-inventory.md). This later evidence does not establish
+which deployed consumers exercised the affected method.
+
 The README extraction pin `7ce44fd8dac29299b88623ca0252e5f5cebcacfc` was also
 inspected with `git show` and contains the permissive verifier. It must not be
 presented as a security-fixed consumer pin. Registry versions and actual deployed

@@ -46,7 +46,11 @@ explicit unavailable result; it must not fabricate identity evidence.
 
 ## Remaining gates
 
-Clean-tree packaging is the next checkpoint check. Backup writes, legacy migration,
+Clean-tree `cargo package --locked` passed at documentation checkpoint
+`764a9f349310bdeee720ab93fe25fe8b5ad2d66d` on Rust 1.97.0, `aarch64-apple-darwin`.
+The package check reported the now-inventoried yanked spin dependency; follow-up
+dependency changes and advisory decisions are recorded in
+[the release inventory](../release-inventory.md). Backup writes, legacy migration,
 standalone UI, host dogfooding, and release automation continue as separate stages.
 Registry publication and cross-platform/device acceptance are not implied by these
 commits or the historical package version `0.3.2`.
