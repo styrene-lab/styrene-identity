@@ -1,5 +1,8 @@
 # Identity 0.4.0-rc.1 candidate status
 
+The newer [RC.2 handoff](handoffs/2026-09-07-rc2.md) records its independently
+validated source, artifacts, guarded SSH decision, and runtime evidence.
+
 The evidence below describes the immutable RC.1 artifact. A later source follow-up
 adds private-key import rejection coverage and a guarded SSH advisory
 non-applicability decision in `docs/dependency-policy.md`. Those changes are not
