@@ -5073,7 +5073,7 @@ dependencies = [
 
 [[package]]
 name = "styrene-identity"
-version = "0.4.0-rc.1"
+version = "0.4.0-rc.2"
 dependencies = [
  "android-keyring",
  "argon2",
@@ -5112,7 +5112,7 @@ dependencies = [
 
 [[package]]
 name = "styrene-identity-cli"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "clap",
  "serde",
@@ -5126,7 +5126,7 @@ dependencies = [
 
 [[package]]
 name = "styrene-identity-desktop"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -5146,7 +5146,7 @@ dependencies = [
 
 [[package]]
 name = "styrene-identity-lifecycle"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "async-trait",
  "hex",
@@ -5163,7 +5163,7 @@ dependencies = [
 
 [[package]]
 name = "styrene-identity-ui"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "async-trait",
  "dioxus",

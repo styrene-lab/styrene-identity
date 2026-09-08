@@ -9,8 +9,9 @@ Current CI and commands are documented in `CONTRIBUTING.md`. `scripts/validate.s
 software and candidate-artifact gates. The release-candidate workflow uploads
 evidence; it never publishes to crates.io as a side effect.
 
-The first standalone candidate is `0.4.0-rc.1`; application/backend/UI packages use
-independent `0.1.0-rc.1` candidate versions. Registry inventory confirms published
+The first standalone candidate was `0.4.0-rc.1`. The follow-up candidate is
+`0.4.0-rc.2`; application/backend/UI packages use independent `0.1.0-rc.2`
+candidate versions. Registry inventory confirms published
 Identity versions through `0.3.2`. See `docs/release-inventory.md`. These are Git-only
 candidate versions until registry approval and remaining acceptance gates close.
 

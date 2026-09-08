@@ -1,6 +1,6 @@
 [package]
 name = "styrene-identity-ui"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 edition = "2024"
 rust-version = "1.97"
 license = "MIT"
@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 dioxus = { version = "=0.8.0-alpha.1", default-features = false, features = ["html", "macro", "signals", "hooks", "asset", "document"] }
-styrene-identity = { path = "../..", version = "0.4.0-rc.1", default-features = false }
+styrene-identity = { path = "../..", version = "0.4.0-rc.2", default-features = false }
 
 [dev-dependencies]
 async-trait = "0.1"

@@ -32,6 +32,9 @@ denied. These tests do not establish runtime, mobile, Linux, or hardware accepta
 
 ## Backend request
 
+Tracked by the backend owner at
+<https://github.com/styrene-lab/styrene-rs/issues/77>.
+
 Add a versioned, read-only canonical Identity overview contract associated with
 the active session generation. Supply the canonical signing public key only when
 the backend can establish that binding. Keep RNS and LXMF addresses separate.

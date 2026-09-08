@@ -25,4 +25,4 @@ jobs:
           name: identity-candidate-${{ runner.os }}
           path: target/release-evidence/
       # Publication is deliberately not a side effect of building a candidate.
-      # Registry approval and unsupported SSH/Linux-desktop lanes remain explicit.
+       # Registry approval and Linux-desktop/device acceptance remain explicit.
