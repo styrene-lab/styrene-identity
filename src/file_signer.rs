@@ -1,15 +1,17 @@
 //! Tier D: EncryptedFile signer — argon2id + ChaCha20Poly1305.
 //!
 //! Default signer for desktop/server deployments. Stores the root secret
-//! in an encrypted file at `~/.styrene/identity.key` (or configurable path).
+//! in an encrypted file at `~/.config/styrene/identity.key` (or configurable path).
 //!
 //! File format:
 //! ```text
-//! [salt:32][nonce:12][ciphertext:32+16]
+//! STID[version:1][salt:32][nonce:12][ciphertext:32+16]
 //! ```
 //! - salt: random 32 bytes for argon2id
 //! - nonce: random 12 bytes for ChaCha20Poly1305
 //! - ciphertext: encrypted 32-byte root secret + 16-byte auth tag
+//!
+//! Legacy 92-byte headerless files remain readable. The header is not AEAD-bound.
 
 use std::path::{Path, PathBuf};
 
@@ -47,11 +49,24 @@ fn argon2_params() -> Argon2<'static> {
     Argon2::new(Algorithm::Argon2id, Version::V0x13, params)
 }
 
+/// Own and wipe the memory-hard KDF workspace as well as its output key. The
+/// allocating Argon2 convenience method does not wipe its full block allocation.
+fn password_key(
+    passphrase: &[u8],
+    salt: &[u8],
+    output: &mut [u8; 32],
+) -> Result<(), argon2::Error> {
+    let argon = argon2_params();
+    let mut blocks =
+        zeroize::Zeroizing::new(vec![argon2::Block::default(); argon.params().block_count()]);
+    argon.hash_password_into_with_memory(passphrase, salt, output, &mut *blocks)
+}
+
 /// Tier D file-based identity signer.
 ///
 /// Requires a passphrase to decrypt the identity file. The passphrase is
-/// provided via a [`PassphraseProvider`] — never read from environment
-/// variables, which are visible to co-tenant processes.
+/// provided via a [`PassphraseProvider`]. Built-in signers do not read credential
+/// environment variables; custom providers remain responsible for input origin.
 pub struct FileSigner {
     path: PathBuf,
     label: String,
@@ -156,12 +171,8 @@ impl FileSigner {
     /// This is atomic at the kernel level (no TOCTOU race). To replace an
     /// existing identity, delete the file first (after backing up).
     pub fn generate(&self, passphrase: &[u8]) -> Result<(), SignerError> {
-        let mut root_secret = [0u8; SECRET_LEN];
-        OsRng.fill_bytes(&mut root_secret);
-
-        let result = self.save_exclusive(&root_secret, passphrase);
-        root_secret.zeroize();
-        result
+        let root_secret = RootSecret::ephemeral();
+        self.save_exclusive(root_secret.as_bytes(), passphrase)
     }
 
     /// Encrypt and write an identity file. Uses `create_new(true)` (O_EXCL)
@@ -233,12 +244,11 @@ impl FileSigner {
         OsRng.fill_bytes(&mut nonce_bytes);
 
         // Derive encryption key from passphrase via argon2id (hardened params)
-        let mut key = [0u8; 32];
-        argon2_params()
-            .hash_password_into(passphrase, &salt, &mut key)
+        let mut key = zeroize::Zeroizing::new([0u8; 32]);
+        password_key(passphrase, &salt, &mut key)
             .map_err(|e| SignerError::SigningFailed(format!("argon2id: {e}")))?;
 
-        let cipher = ChaCha20Poly1305::new_from_slice(&key)
+        let cipher = ChaCha20Poly1305::new_from_slice(&*key)
             .map_err(|e| SignerError::SigningFailed(format!("cipher init: {e}")))?;
         key.zeroize();
 
@@ -261,7 +271,16 @@ impl FileSigner {
     /// Accepts both the current versioned format (v1, 97 bytes with STID header)
     /// and the legacy headerless format (92 bytes) for backward compatibility.
     pub fn load(&self, passphrase: &[u8]) -> Result<RootSecret, SignerError> {
-        let file_data = std::fs::read(&self.path)?;
+        use std::io::Read;
+        // The wire format is fixed-size. Do not allocate an unbounded buffer for
+        // an invalid or replaced identity file. Path authorization belongs to the
+        // custody adapter/application; the lifecycle service additionally uses
+        // descriptor-relative no-follow opens.
+        if !std::fs::metadata(&self.path)?.is_file() {
+            return Err(SignerError::DecryptionFailed("identity is not a regular file".into()));
+        }
+        let mut file_data = Vec::new();
+        std::fs::File::open(&self.path)?.take(FILE_LEN as u64 + 1).read_to_end(&mut file_data)?;
         Self::decrypt(&file_data, passphrase)
     }
 
@@ -295,25 +314,24 @@ impl FileSigner {
         let ciphertext = &payload[SALT_LEN + NONCE_LEN..];
 
         // Derive key from passphrase (hardened params)
-        let mut key = [0u8; 32];
-        argon2_params()
-            .hash_password_into(passphrase, salt, &mut key)
+        let mut key = zeroize::Zeroizing::new([0u8; 32]);
+        password_key(passphrase, salt, &mut key)
             .map_err(|e| SignerError::DecryptionFailed(format!("argon2id: {e}")))?;
 
-        let cipher = ChaCha20Poly1305::new_from_slice(&key)
+        let cipher = ChaCha20Poly1305::new_from_slice(&*key)
             .map_err(|e| SignerError::DecryptionFailed(format!("cipher init: {e}")))?;
         key.zeroize();
 
         let nonce = Nonce::from_slice(nonce_bytes);
-        let mut plaintext = cipher.decrypt(nonce, ciphertext).map_err(|_| {
-            SignerError::DecryptionFailed("wrong passphrase or corrupted file".into())
-        })?;
+        let plaintext =
+            zeroize::Zeroizing::new(cipher.decrypt(nonce, ciphertext).map_err(|_| {
+                SignerError::DecryptionFailed("wrong passphrase or corrupted file".into())
+            })?);
 
-        let mut secret = [0u8; SECRET_LEN];
+        let mut secret = zeroize::Zeroizing::new([0u8; SECRET_LEN]);
         secret.copy_from_slice(&plaintext);
-        plaintext.zeroize();
 
-        Ok(RootSecret::new(secret))
+        Ok(RootSecret::new(*secret))
     }
 
     /// Check if the identity file exists.
@@ -378,6 +396,15 @@ mod tests {
 
         let secret = signer.load(passphrase).unwrap();
         assert_ne!(secret.as_bytes(), &[0u8; 32]);
+    }
+
+    #[test]
+    fn oversized_identity_reads_are_bounded_and_rejected() {
+        let (signer, _dir) = temp_signer();
+        let file = std::fs::File::create(signer.path()).unwrap();
+        file.set_len(1 << 30).unwrap();
+        assert!(matches!(signer.load(b"test-passphrase"), Err(SignerError::DecryptionFailed(_))));
+        assert_eq!(file.metadata().unwrap().len(), 1 << 30);
     }
 
     #[test]

@@ -4,20 +4,40 @@ Deterministic key hierarchy for Styrene mesh nodes. One root secret derives
 all protocol-specific keys, including Git commit signing and repository
 authority keys, via HKDF-SHA256 with domain separation.
 
-For this extracted repository, consume a reviewed immutable Git revision. Do not
-assume registry version `0.3.2` contains this checkout's contracts. The pin below
-is the extraction baseline; later revisions need their own consumer validation.
+Consume an immutable Git revision for this development repository. Registry version
+`0.3.2` predates the standalone contracts. The pin below is the software-validated
+Git-only release candidate containing verifier and recovery hardening; consumer
+acceptance, platform evidence, and registry release approval remain separate.
+See the [checkpoint handoff](docs/handoffs/2026-09-07-checkpoint.md) and
+[adversarial review](docs/adversarial-review-2026-09-06.md).
+The current [candidate handoff](docs/handoffs/2026-09-07-candidate.md) records the
+immutable source, packaged artifacts, draft review, and remaining acceptance gates.
 
 Agents start with [AGENTS.md](AGENTS.md). See [CONTRIBUTING.md](CONTRIBUTING.md)
 for standalone validation, [integration context](docs/integration-context.md)
 for repository ownership, and [the plugin boundary](docs/plugin-boundary.md)
 for the accepted direction and remaining design work.
 
+The Identity product includes a shared lifecycle backend, catalog and managed-backup
+CRUD, a CLI, an importable Dioxus overview page, and a standalone desktop shell.
+Actual Mesh host adoption and advanced custody/key-management operations remain
+separate work. See [CLI usage](apps/cli/README.md),
+[desktop usage](apps/desktop/README.md), [product architecture](docs/product-architecture.md), and
+[versioning and release workflow](RELEASE.md). See
+[file-backed CRUD](docs/file-custody-crud.md) for supported mutations. Advanced
+custody operations and platform/device acceptance remain pending.
+
+The proposed [CLI CRUD lifecycle](docs/cli-lifecycle.md) maps identity, custody,
+key, backup, and lifecycle operations to the shared backend and acceptance cases.
+The [adversarial review](docs/adversarial-review-2026-09-06.md) records a reproduced
+weak-key signature-verification flaw and its local fix, recovery hardening,
+journal migration limits, and the backup inspection/verification slice.
+
 ## Quick start
 
 ```toml
 [dependencies]
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc" }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1" }
 ```
 
 ### Generate an identity
@@ -29,7 +49,8 @@ use styrene_identity::signer::IdentitySigner;
 let provider = Box::new(ClosurePassphraseProvider::new(|| {
     Ok(b"my-passphrase".to_vec())
 }));
-let signer = FileSigner::new("~/.config/styrene/identity.key", provider);
+// Supply an explicit private location; Rust does not expand "~" in this string.
+let signer = FileSigner::new("/absolute/private/path/identity.key", provider);
 signer.generate(b"my-passphrase").expect("generate identity");
 ```
 
@@ -212,6 +233,11 @@ let root = chain.root_secret().await?;
 
 ## Feature flags
 
+The [read-only overview client](docs/read-only-overview.md) is available without
+default features. It supplies typed public summaries, expected-identity checks,
+and stale-result filtering for the first UI extension slice. Production custody
+sources and UI integration remain pending.
+
 | Feature | Default | Enables |
 |---------|---------|---------|
 | `file-signer` | **yes** | `FileSigner`, `IdentityVault` (argon2, chacha20poly1305) |
@@ -229,19 +255,19 @@ what you need:
 
 ```toml
 # Derivation and core contracts, without the file signer
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false }
 
 # Derivation + public key helpers, no file signer
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false, features = ["signing"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false, features = ["signing"] }
 
 # Repository authority profile, no signer storage or transport
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false, features = ["repository-signing"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false, features = ["repository-signing"] }
 
 # Deterministic X.509 issuance for control-plane TLS/mTLS
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false, features = ["pki"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false, features = ["pki"] }
 
 # Full file-based identity (default)
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc" }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1" }
 ```
 
 ## File format
@@ -257,11 +283,16 @@ STID [version:1] [salt:32] [nonce:12] [ciphertext:32+16]
 - **Permissions**: 0o600, set atomically at creation via `O_EXCL`
 - **Backward compat**: legacy 92-byte headerless files (pre-v1) are still readable
 
-## Identity hash
+## Styrene Identity ID
 
-The canonical identity hash is SHA-256 of the RNS signing Ed25519 public key,
-truncated to 16 bytes (32 hex chars). This is the mesh identity used by
-Signum, styrened, and cross-service attribution:
+The canonical Styrene Identity ID is SHA-256 of the canonical Ed25519 signing
+public key, truncated to 16 bytes (32 hex chars). The canonical signing seed
+shares the existing RNS signing derivation label. The Styrene Identity ID is
+distinct from the RNS transport identity hash and the LXMF delivery destination.
+See [identity terminology](docs/integration-context.md#distinguish-the-identifiers).
+
+`IdentityId::from_public_key` implements this calculation. The equivalent
+derivation is:
 
 ```rust
 use styrene_identity::derive::{KeyDeriver, KeyPurpose};
@@ -303,7 +334,7 @@ governance policy.
 Enable only the required profile:
 
 ```toml
-styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "7ce44fd8dac29299b88623ca0252e5f5cebcacfc", default-features = false, features = ["repository-signing"] }
+styrene-identity = { git = "https://github.com/styrene-lab/styrene-identity", rev = "eaa5223ddafa28a5de88caa6e132bf6df1cc3eb1", default-features = false, features = ["repository-signing"] }
 ```
 
 `styrene-identity` verifies identity attribution and cryptographic validity.
@@ -357,7 +388,12 @@ TLS(auspex/control) = bdbce0671a517c65205339d22d04adecc45b588396d8b4762ddedb71cd
 These are pinned in the test suite. Any implementation of the derivation
 hierarchy must reproduce them.
 
-## Ecosystem usage
+## Historical ecosystem usage
+
+The following table preserves pre-extraction integration context. Dependency
+forms and versions are historical, not verified current consumer configurations.
+For new integrations, use a reviewed immutable Git revision as shown above and
+follow the [consumer handoff procedure](CONTRIBUTING.md#consumer-handoff-and-publication).
 
 | Crate/Binary | Dependency | Purpose |
 |------|------------|---------|

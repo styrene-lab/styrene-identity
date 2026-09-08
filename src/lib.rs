@@ -128,6 +128,7 @@ pub mod identity;
 mod identity_id;
 #[cfg(all(feature = "keychain", any(target_os = "macos", target_os = "ios")))]
 pub mod keychain_signer;
+pub mod overview;
 #[cfg(feature = "pki")]
 pub mod pki;
 #[cfg(feature = "signing")]

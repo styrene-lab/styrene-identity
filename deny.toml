@@ -1,0 +1,25 @@
+[advisories]
+version = 2
+# No blanket advisory ignores. Check each shipped target/feature profile.
+ignore = [
+  { id = "RUSTSEC-2024-0436", reason = "Unmaintained compile-time paste macro in pinned Dioxus image codecs; no reported vulnerability. Track renderer dependency migration; see docs/dependency-policy.md." },
+]
+
+[licenses]
+version = 2
+allow = [
+  "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "MIT", "BSD-2-Clause",
+  "BSD-3-Clause", "ISC", "Unicode-3.0", "Zlib", "BSL-1.0", "Unlicense",
+  "CC0-1.0", "OpenSSL", "BlueOak-1.0.0", "MPL-2.0",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+deny = [{ name = "rsa", wrappers = ["ssh-key"] }]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

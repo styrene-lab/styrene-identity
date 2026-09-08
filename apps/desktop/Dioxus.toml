@@ -1,0 +1,9 @@
+[application]
+name = "Styrene Identity"
+default_platform = "desktop"
+
+[bundle]
+identifier = "org.styrene.identity"
+publisher = "Styrene Labs"
+short_description = "Standalone Identity lifecycle management"
+category = "Utility"

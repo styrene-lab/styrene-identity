@@ -4,9 +4,9 @@
 
 | Repository | Responsibility |
 |---|---|
-| `styrene-lab/styrene-identity` | Derivation, canonical Identity ID, signing contracts, custody adapters, records, encrypted identity backup |
+| `styrene-lab/styrene-identity` | Identity library, lifecycle backend/CLI, shared Identity page, standalone UI, and Identity-side integration contracts |
 | `styrene-lab/styrene-rs` | Daemon, TUI, mesh protocols, RNS/LXMF transport, persistence, runtime/profile orchestration, IPC |
-| `styrene-lab/styrene-ui` | Dioxus applications, presentation, platform UI adapters |
+| `styrene-lab/styrene-ui` | Mesh applications, Mesh presentation/platform UI adapters, and host side of Identity integration |
 | comms-lab coordination checkout | Host assignment, exact consumer revision pairs, integration evidence |
 
 The Identity repository was extracted to permit independent development and a
@@ -14,6 +14,12 @@ future optional lifecycle-management plugin. Extraction did not create a plugin
 loader, UI, or new custody implementation. [EXTRACTION.md](../EXTRACTION.md)
 records source provenance. The MIT notices remain intact; unrelated monorepo
 LICENSE-only commits were excluded from filtered history.
+
+The product direction now includes a standalone Identity UI and CLI backed by
+shared lifecycle operations in this repository. See the
+[product architecture](product-architecture.md) for package boundaries. The CLI
+and backend implement catalog/backup CRUD. The standalone UI and mock host consume
+those services. The importable library remains usable independently of these surfaces.
 
 An agent working here can complete library changes and software validation without
 any of the other checkouts. Consumer acceptance requires a separate handoff, not

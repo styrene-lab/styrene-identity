@@ -226,10 +226,8 @@ impl Session for StyreneAgent {
     }
 
     async fn sign(&mut self, request: SignRequest) -> Result<Signature, AgentError> {
-        // Step 1: derive only public keys to find which key spec matches.
-        let (_identities, key_map) = self.derive_public_map().await?;
-
-        // Extract the public key bytes from the request.
+        // Reject unsupported algorithms before custody access. The transitive
+        // ssh-key RSA parser is not an RSA private-operation capability here.
         let requested_pubkey = match &request.pubkey {
             KeyData::Ed25519(pk) => pk.0,
             _ => {
@@ -238,6 +236,8 @@ impl Session for StyreneAgent {
                 ))));
             }
         };
+
+        let (_identities, key_map) = self.derive_public_map().await?;
 
         // Find the matching key spec.
         let spec = key_map.get(&requested_pubkey).ok_or_else(|| {
@@ -259,6 +259,79 @@ impl Session for StyreneAgent {
 mod tests {
     use super::*;
     use crate::file_signer::FileSigner;
+
+    #[tokio::test]
+    async fn rsa_requests_are_rejected_before_custody_access() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+        struct Unused(Arc<AtomicUsize>);
+        #[async_trait::async_trait]
+        impl IdentitySigner for Unused {
+            fn tier(&self) -> crate::signer::SignerTier {
+                crate::signer::SignerTier::EncryptedFile
+            }
+            fn label(&self) -> &str {
+                "unused test custody"
+            }
+            fn is_available(&self) -> bool {
+                true
+            }
+            async fn root_secret(&self) -> Result<crate::signer::RootSecret, SignerError> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                Err(SignerError::Unavailable("unused".into()))
+            }
+            async fn sign(&self, _: &[u8]) -> Result<Vec<u8>, SignerError> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                Err(SignerError::Unavailable("unused".into()))
+            }
+        }
+        let calls = Arc::new(AtomicUsize::new(0));
+        let mut agent = StyreneAgent::new(Box::new(Unused(calls.clone())), &[]);
+        let public = ssh_key::public::RsaPublicKey {
+            e: ssh_key::Mpint::from_bytes(&[1, 0, 1]).unwrap(),
+            n: ssh_key::Mpint::from_bytes(&[1; 256]).unwrap(),
+        };
+        assert!(
+            agent
+                .sign(SignRequest {
+                    pubkey: KeyData::Rsa(public.clone()),
+                    data: b"untrusted request".to_vec(),
+                    flags: 0
+                })
+                .await
+                .is_err()
+        );
+        // Import paths retain no client-supplied private key. These are parser
+        // containers only; deliberately no RSA operation is performed on them.
+        let integer = || ssh_key::Mpint::from_bytes(&[1]).unwrap();
+        let identity = ssh_agent_lib::proto::AddIdentity {
+            credential: ssh_agent_lib::proto::Credential::Key {
+                privkey: ssh_key::private::KeypairData::Rsa(ssh_key::private::RsaKeypair {
+                    public,
+                    private: ssh_key::private::RsaPrivateKey {
+                        d: integer(),
+                        iqmp: integer(),
+                        p: integer(),
+                        q: integer(),
+                    },
+                }),
+                comment: "client-supplied fixture".into(),
+            },
+        };
+        assert!(agent.add_identity(identity.clone()).await.is_err());
+        assert!(
+            agent
+                .add_identity_constrained(ssh_agent_lib::proto::AddIdentityConstrained {
+                    identity,
+                    constraints: vec![]
+                })
+                .await
+                .is_err()
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
 
     fn test_signer() -> (Box<dyn IdentitySigner>, tempfile::TempDir) {
         let dir = tempfile::tempdir().expect("temp dir");
